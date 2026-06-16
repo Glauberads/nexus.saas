@@ -1709,6 +1709,44 @@ window.openProductModal = function() {
   document.getElementById('modal-product').style.display = 'flex';
 }
 
+window.uploadProductImage = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const btnLabel = input.previousElementSibling;
+  const originalText = btnLabel.innerHTML;
+  btnLabel.innerHTML = '⏳ Enviando...';
+  document.getElementById('prod-thumb-status').style.display = 'none';
+  
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `covers/${fileName}`;
+    
+    // We assume a bucket called 'public' or 'products' or 'images'.
+    // If 'images' bucket doesn't exist, this will throw an error to the user,
+    // which they will need to create in the Supabase Dashboard.
+    const { data, error } = await supabaseClient.storage.from('images').upload(filePath, file, { upsert: true });
+    
+    if (error) {
+      alert("Erro ao subir imagem: " + error.message + "\n\nSe o bucket 'images' não existir, crie um bucket público com esse nome no painel do Supabase Storage.");
+      return;
+    }
+    
+    const { data: publicUrlData } = supabaseClient.storage.from('images').getPublicUrl(filePath);
+    
+    document.getElementById('prod-thumb').value = publicUrlData.publicUrl;
+    document.getElementById('prod-thumb-status').style.display = 'block';
+    
+  } catch (err) {
+    console.error(err);
+    alert('Erro inesperado no upload.');
+  } finally {
+    btnLabel.innerHTML = originalText;
+    input.value = ''; // reseta
+  }
+}
+
 window.editProduct = async function(id) {
   currentEditingProductId = id;
   document.getElementById('modal-product-title').textContent = 'Editar Produto';

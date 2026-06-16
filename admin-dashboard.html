@@ -868,8 +868,15 @@
             </div>
 
             <div style="margin-bottom: 16px;">
-              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL da Imagem da Capa (Opcional)</label>
-              <input type="text" id="prod-thumb" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://meusite.com/imagem.png">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Imagem da Capa (URL ou Upload)</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="prod-thumb" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://meusite.com/imagem.png">
+                <label for="prod-thumb-file" style="background: #10B981; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; white-space: nowrap; margin: 0;">
+                  📁 Subir do PC
+                </label>
+                <input type="file" id="prod-thumb-file" accept="image/*" style="display: none;" onchange="window.uploadProductImage(this)">
+              </div>
+              <span id="prod-thumb-status" style="font-size: 11px; color: var(--success); display: none; margin-top: 4px;">✅ Upload concluído! (A URL foi preenchida)</span>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
