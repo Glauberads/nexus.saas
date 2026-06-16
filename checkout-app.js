@@ -199,7 +199,11 @@ async function processPayment() {
     loader.style.display = 'none';
 
     if (!res.ok || !data.success) {
-      throw new Error(data.error || "Falha ao gerar pagamento");
+      let errorMsg = data.error || "Falha ao gerar pagamento";
+      if (errorMsg.includes('invalid_billingType') && (errorMsg.includes('chave Pix') || errorMsg.includes('Pix'))) {
+         errorMsg = "Atenção: Sua conta do Asaas (Sandbox ou Produção) ainda não tem uma Chave PIX cadastrada. Para resolver, acesse o painel do Asaas, vá em 'Minha Conta > Chaves Pix' e clique em 'Gerar chave aleatória'.";
+      }
+      throw new Error(errorMsg);
     }
 
     if (window.NexusTracker && window.NexusTracker.trackEvent) {
