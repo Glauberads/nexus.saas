@@ -100,3 +100,35 @@ CREATE TABLE attribution (
   time_to_purchase INTERVAL,
   total_touchpoints INTEGER DEFAULT 1
 );
+
+
+-- ==============================================================================
+-- 7. TABELA DE WEBHOOK LOGS
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.webhook_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    platform TEXT,
+    event_type TEXT,
+    status TEXT,
+    amount NUMERIC,
+    currency TEXT DEFAULT 'BRL',
+    buyer_name TEXT,
+    buyer_email TEXT,
+    buyer_phone TEXT,
+    transaction_id TEXT,
+    raw_payload JSONB,
+    response_status INT,
+    response_message TEXT,
+    source_ip TEXT,
+    environment TEXT,
+    is_test BOOLEAN DEFAULT false
+);
+
+ALTER TABLE public.webhook_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Enable read access for all users on webhook_logs"
+    ON public.webhook_logs FOR SELECT USING (true);
+    
+CREATE POLICY "Enable insert for all users on webhook_logs"
+    ON public.webhook_logs FOR INSERT WITH CHECK (true);

@@ -154,6 +154,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-leads') await loadLeadsModule();
   else if (moduleId === 'module-funnel') await loadFunnelModule();
   else if (moduleId === 'module-events') await loadEventsModule();
+  else if (moduleId === 'module-webhooks') await loadWebhooksModule();
 }
 
 // --- DASHBOARD ---
@@ -426,8 +427,145 @@ async function openLeadDrawer(leadId) {
 }
 
 // ==========================================
-// 5. REALTIME FEED
+// 5. WEBHOOKS MODULE
 // ==========================================
+async function loadWebhooksModule() {
+  let query = supabaseClient.from('webhook_logs').select('*').order('created_at', { ascending: false }).limit(100);
+  query = applyDateFilter(query);
+  
+  const { data: logs } = await query;
+  
+  if (!logs) return;
+  
+  const total = logs.length;
+  const approved = logs.filter(l => ['purchase.approved', 'paid', 'approved', 'compra_aprovada'].includes(l.event_type)).length;
+  const pending = logs.filter(l => ['billet_printed', 'boleto_gerado', 'pix_generated', 'pix_gerado'].includes(l.event_type)).length;
+  const abandoned = logs.filter(l => ['cart_abandoned', 'checkout_abandoned', 'abandoned_cart'].includes(l.event_type)).length;
+  
+  document.getElementById('wh-total').textContent = total;
+  document.getElementById('wh-approved').textContent = approved;
+  document.getElementById('wh-pending').textContent = pending;
+  document.getElementById('wh-abandoned').textContent = abandoned;
+  
+  const tbody = document.getElementById('webhook-logs-tbody');
+  if (tbody) {
+    if (logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum webhook recebido ainda.<br/>Configure a URL na sua plataforma de checkout.</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = '';
+    logs.forEach(log => prependWebhookLogToFeed(log, tbody, false));
+  }
+}
+
+function prependWebhookLogToFeed(log, tbody, animate=true) {
+  const timeStr = new Date(log.created_at).toLocaleString('pt-BR');
+  const amountStr = Number(log.amount) > 0 ? `R$ ${Number(log.amount).toFixed(2)}` : '-';
+  const buyerStr = log.buyer_name || log.buyer_email || 'Desconhecido';
+  
+  const statusBadge = log.response_status === 200 
+    ? `<span class="badge success">200 OK</span>` 
+    : `<span class="badge" style="background: var(--danger-bg); color: var(--danger);">${log.response_status} Falha</span>`;
+    
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${timeStr}</td>
+    <td><span class="badge" style="background: rgba(255,255,255,0.1); color: var(--text-primary);">${log.platform || 'API'}</span></td>
+    <td><span style="font-weight: 600; color: var(--accent);">${log.event_type}</span></td>
+    <td>${amountStr}</td>
+    <td>${buyerStr}</td>
+    <td>${statusBadge}</td>
+  `;
+  tbody.prepend(tr);
+  
+  if (animate) {
+    tr.animate([
+      { backgroundColor: 'rgba(255, 107, 0, 0.2)' },
+      { backgroundColor: 'transparent' }
+    ], { duration: 2000 });
+  }
+}
+
+function copyWebhookUrl() {
+  const url = document.getElementById('webhook-url').innerText.trim();
+  navigator.clipboard.writeText(url);
+  showToast("URL copiada com sucesso.");
+}
+
+async function testWebhook() {
+  const url = document.getElementById('webhook-url').innerText.trim();
+  const timestamp = Date.now();
+  const payload = {
+    event: "purchase.approved",
+    product: "NexusSaaS",
+    amount: 497,
+    currency: "BRL",
+    is_test: true,
+    environment: "test",
+    buyer: {
+      name: "Lead Teste",
+      email: "teste@nexussaas.com",
+      phone: "11999999999"
+    },
+    transaction_id: "test_" + timestamp
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    if (res.ok) {
+      showToast("Webhook testado com sucesso.");
+      if (currentModule === 'module-webhooks') loadWebhooksModule();
+    } else {
+      const data = await res.json();
+      showToast("Falha no Webhook: " + (data.error || res.status), true);
+    }
+  } catch (e) {
+    showToast("Erro ao contatar Edge Function.", true);
+  }
+}
+
+function showToast(msg, isError=false) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  
+  const toast = document.createElement('div');
+  toast.style.background = isError ? 'var(--danger-bg)' : 'var(--success-bg)';
+  toast.style.color = isError ? 'var(--danger)' : 'var(--success)';
+  toast.style.border = `1px solid ${isError ? 'var(--danger)' : 'var(--success)'}`;
+  toast.style.padding = '12px 24px';
+  toast.style.borderRadius = 'var(--radius-sm)';
+  toast.style.fontSize = '14px';
+  toast.style.fontWeight = '600';
+  toast.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.3)';
+  toast.innerText = msg;
+  
+  container.appendChild(toast);
+  
+  toast.animate([
+    { opacity: 0, transform: 'translateY(20px)' },
+    { opacity: 1, transform: 'translateY(0)' }
+  ], { duration: 300 });
+  
+  setTimeout(() => {
+    toast.animate([
+      { opacity: 1, transform: 'translateY(0)' },
+      { opacity: 0, transform: 'translateY(20px)' }
+    ], { duration: 300 }).onfinish = () => toast.remove();
+  }, 4000);
+}
+
+// ==========================================
+// 6. REALTIME FEED
+// ==========================================
+window.copyWebhookUrl = copyWebhookUrl;
+window.testWebhook = testWebhook;
+
 function setupRealtime() {
   if (!supabaseClient) return;
   
@@ -444,6 +582,20 @@ function setupRealtime() {
       const eventName = payload.new.event_name;
       if (['Purchase', 'Lead', 'QualifiedLead', 'CheckoutAbandoned'].includes(eventName) && currentModule === 'module-dashboard') {
         loadDashboard();
+      }
+    })
+    .subscribe();
+    
+  supabaseClient.channel('public:webhook_logs')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'webhook_logs' }, payload => {
+      if (currentModule === 'module-webhooks') {
+        const tbody = document.getElementById('webhook-logs-tbody');
+        if (tbody) {
+          if (tbody.innerHTML.includes('Aguardando eventos') || tbody.innerHTML.includes('Nenhum webhook recebido')) {
+             tbody.innerHTML = '';
+          }
+          prependWebhookLogToFeed(payload.new, tbody, true);
+        }
       }
     })
     .subscribe();

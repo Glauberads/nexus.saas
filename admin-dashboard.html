@@ -28,6 +28,7 @@
       <li><a href="#" data-target="module-vendas">💰 Vendas</a></li>
       <li><a href="#" data-target="module-campaigns">📢 Campanhas</a></li>
       <li><a href="#" data-target="module-ads">🎯 Meta / Google Ads</a></li>
+      <li><a href="#" data-target="module-webhooks">🔌 Webhooks</a></li>
       <li><a href="#" data-target="module-events">⚡ Eventos Realtime</a></li>
       <li><a href="#" data-target="module-config">⚙️ Configurações</a></li>
     </ul>
@@ -183,6 +184,60 @@
       <section id="module-vendas" class="module-section"><h2>Vendas</h2><p style="color: var(--text-muted)">Carregando dados financeiros...</p></section>
       <section id="module-campaigns" class="module-section"><h2>Campanhas (UTM)</h2><p style="color: var(--text-muted)">Carregando tracking multi-touch...</p></section>
       <section id="module-ads" class="module-section"><h2>Meta & Google Ads</h2><p style="color: var(--text-muted)">Conectando APIs de parceiros...</p></section>
+      <!-- MODULE 6: WEBHOOKS -->
+      <section id="module-webhooks" class="module-section">
+        <h2>Central de Webhooks</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Monitore os eventos enviados pelas plataformas de checkout para o NexusSaaS.</p>
+        
+        <div class="chart-card" style="margin-bottom: 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h3 style="margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              Status da Edge Function: <span class="badge success">Online</span>
+            </h3>
+            <div style="font-family: monospace; font-size: 12px; color: var(--text-muted); background: var(--bg-main); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--border); margin-top: 8px; user-select: all;" id="webhook-url">
+              https://wkomsnqucatqepabepje.supabase.co/functions/v1/purchase-webhook
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn-login" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="copyWebhookUrl()">📋 Copiar URL</button>
+            <button class="btn-login" style="width: auto; padding: 10px 16px; font-size: 13px; background: transparent; border: 1px solid var(--accent); color: var(--accent);" onclick="testWebhook()">⚡ Testar Webhook</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card"><h3>Recebidos</h3><div class="kpi-value" id="wh-total">--</div></div>
+          <div class="kpi-card" style="border-color: var(--success);"><h3 style="color: var(--success);">Compras Aprovadas</h3><div class="kpi-value" style="color: var(--success);" id="wh-approved">--</div></div>
+          <div class="kpi-card"><h3>Pix / Boletos</h3><div class="kpi-value" id="wh-pending">--</div></div>
+          <div class="kpi-card" style="border-color: var(--danger);"><h3 style="color: var(--danger);">Abandonos</h3><div class="kpi-value" style="color: var(--danger);" id="wh-abandoned">--</div></div>
+        </div>
+
+        <div class="table-card" style="margin-top: 24px;">
+          <div class="table-header">
+            <h3>Logs de Webhooks em Tempo Real</h3>
+          </div>
+          <div style="overflow-x: auto;">
+            <table style="min-width: 800px;">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Plataforma</th>
+                  <th>Evento</th>
+                  <th>Valor</th>
+                  <th>Comprador</th>
+                  <th>Status HTTP</th>
+                </tr>
+              </thead>
+              <tbody id="webhook-logs-tbody">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Aguardando eventos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Toast Notification Container -->
+        <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px;"></div>
+      </section>
+
       <section id="module-events" class="module-section">
         <h2>Eventos em Tempo Real</h2>
         <p style="color: var(--text-secondary); margin-bottom: 24px;">Fluxo instantâneo de interações do banco de dados.</p>
