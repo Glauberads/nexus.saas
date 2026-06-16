@@ -1044,6 +1044,12 @@ window.testAutomation = async function() {
       body: JSON.stringify(payload)
     });
 
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (data.skipped) showToast("Automação pulada (Prevenção de Duplicidade)");
+      else showToast("Automação disparada com sucesso para o n8n!");
+    } else {
+      showToast("Falha ao disparar automação: " + (data.error || res.statusText), true);
     }
   } catch (err) {
     console.error("Erro disparando edge function:", err);
