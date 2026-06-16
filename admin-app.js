@@ -597,6 +597,73 @@ function setupRealtime() {
           prependWebhookLogToFeed(payload.new, tbody, true);
         }
       }
+      }
     })
     .subscribe();
 }
+
+// ==========================================
+// 7. EXPORT CSV
+// ==========================================
+window.exportLeadsToCSV = async function() {
+  if (!supabaseClient) return;
+
+  try {
+    showToast("Preparando exportação...");
+    
+    // Puxa todos os leads respeitando o filtro de data atual
+    let query = supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
+    query = applyDateFilter(query);
+    
+    const { data: leads, error } = await query;
+    
+    if (error) throw error;
+    if (!leads || leads.length === 0) {
+      showToast("Nenhum lead encontrado para exportar.", true);
+      return;
+    }
+    
+    // Cabeçalhos do CSV
+    const headers = ['Nome', 'Email', 'WhatsApp', 'Origem', 'Campanha', 'Score', 'Temperatura', 'Status', 'Data de Criação'];
+    
+    // Converte os dados
+    const csvRows = [];
+    csvRows.push(headers.join(',')); // Adiciona cabeçalhos
+    
+    leads.forEach(l => {
+      const row = [
+        `"${l.name || ''}"`,
+        `"${l.email || ''}"`,
+        `"${l.whatsapp || ''}"`,
+        `"${l.utm_source || ''}"`,
+        `"${l.utm_campaign || ''}"`,
+        l.lead_score || 0,
+        `"${l.lead_tier || 'frio'}"`,
+        `"${l.lead_status || 'new'}"`,
+        `"${new Date(l.created_at).toLocaleString('pt-BR')}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+    
+    // Gera o Blob e o Link de Download
+    const csvString = csvRows.join('\n');
+    const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' }); // \uFEFF para suportar UTF-8 Excel
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    const d = new Date();
+    const dateStr = `${d.getFullYear()}_${(d.getMonth()+1).toString().padStart(2, '0')}_${d.getDate().toString().padStart(2, '0')}`;
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `nexus_leads_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast("Exportação concluída com sucesso!");
+    
+  } catch (err) {
+    console.error("Erro ao exportar:", err);
+    showToast("Erro ao gerar CSV.", true);
+  }
+};
