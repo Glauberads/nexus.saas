@@ -532,15 +532,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let quizScore = 0;
   
   if (quizModal) {
-    // Show quiz 30 seconds after page load if no exit intent triggered
+    // Show quiz 5 seconds after page load if no exit intent triggered
     setTimeout(() => {
-      if (!exitFired && !sessionStorage.getItem('nexus_quiz_shown')) {
-        sessionStorage.setItem('nexus_quiz_shown', 'true');
+      if (!exitFired) {
         quizModal.style.display = 'flex';
         setTimeout(() => quizModal.classList.add('active'), 10);
         if (window.NexusTracker) window.NexusTracker.track('QuizShown');
       }
-    }, 30000);
+    }, 5000);
 
     document.getElementById('quiz-modal-close').addEventListener('click', () => {
       quizModal.classList.remove('active');

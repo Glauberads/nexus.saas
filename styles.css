@@ -1889,8 +1889,8 @@ ul { list-style: none; }
    COMPARISON SECTION
    ============================================= */
 .comparison-section { padding: 80px 0; text-align: center; }
-.comp-table-wrap { max-width: 800px; margin: 48px auto 0; background: var(--bg-1); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
-.comp-table { width: 100%; border-collapse: collapse; text-align: left; }
+.comp-table-wrap { max-width: 800px; width: 100%; margin: 48px auto 0; background: var(--bg-1); border-radius: var(--radius-lg); overflow-x: auto; border: 1px solid rgba(255,255,255,0.05); }
+.comp-table { width: 100%; border-collapse: collapse; text-align: left; min-width: 500px; }
 .comp-table th, .comp-table td { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .comp-table th { background: var(--bg-2); font-weight: 600; color: var(--gray-2); }
 .comp-nexus { background: rgba(255,107,0,0.03); color: var(--white); font-weight: 600; }
@@ -1957,6 +1957,15 @@ ul { list-style: none; }
   .dash-body { grid-template-columns: 1fr; }
   .dash-sidebar { display: none; }
   .dash-metrics-row { gap: 8px; }
+  .lm-wrapper { padding: 24px; }
+  .lm-form-wrapper { padding: 24px; }
+  .calc-wrapper { padding: 24px; }
+  .pricing-section { padding: 60px 0; }
+  .pricing-card-header { padding: 24px; }
+  .pricing-includes { padding: 24px; }
+  .pricing-cta-area { padding: 24px; }
+  .price-value { font-size: 64px; }
+  .modal-content { padding: 32px 20px; }
 }
 
 @media (max-width: 480px) {
