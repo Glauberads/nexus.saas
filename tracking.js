@@ -289,7 +289,7 @@
       this._logEvent(eventName, allParams, eventId);
 
       // CAPI (for key events)
-      const capiEvents = ['ViewContent','Lead','InitiateCheckout','Purchase','QualifiedLead','ReadyToBuy','VideoComplete','Hero_CTA_Click','Hero_Secondary_Click'];
+      const capiEvents = ['ViewContent','Lead','InitiateCheckout','Purchase','QualifiedLead','ReadyToBuy','VideoComplete','Hero_CTA_Click','Hero_Secondary_Click','Offer_Click','Offer_Checkout','Offer_Conversion'];
       if (capiEvents.includes(eventName)) {
         this._sendCAPI(eventName, params, eventId);
       }
@@ -301,10 +301,10 @@
     _trackMeta(eventName, params, eventId) {
       if (!window.fbq) return;
       const metaStandard = {
-        ViewContent: () => fbq('track', 'ViewContent', { content_name: 'NexusSaaS', currency: 'BRL', value: 600 }, { eventID: eventId }),
+        ViewContent: () => fbq('track', 'ViewContent', { content_name: 'NexusSaaS', currency: 'BRL', value: 497 }, { eventID: eventId }),
         Lead: () => fbq('track', 'Lead', { currency: 'BRL', value: 0 }, { eventID: eventId }),
-        InitiateCheckout: () => fbq('track', 'InitiateCheckout', { currency: 'BRL', value: 600 }, { eventID: eventId }),
-        Purchase: () => fbq('track', 'Purchase', { currency: 'BRL', value: 600, order_id: params.order_id }, { eventID: eventId }),
+        InitiateCheckout: () => fbq('track', 'InitiateCheckout', { currency: 'BRL', value: 497 }, { eventID: eventId }),
+        Purchase: () => fbq('track', 'Purchase', { currency: 'BRL', value: 497, order_id: params.order_id }, { eventID: eventId }),
       };
       if (metaStandard[eventName]) {
         metaStandard[eventName]();
@@ -338,6 +338,10 @@
         Hero_Scroll: 'hero_scroll',
         TrustBar_View: 'trustbar_view',
         ValueProof_View: 'valueproof_view',
+        Offer_View: 'offer_view',
+        Offer_Click: 'offer_click',
+        Offer_Checkout: 'offer_checkout',
+        Offer_Conversion: 'offer_conversion',
       };
 
       const ga4EventName = ga4Map[eventName] || eventName.toLowerCase().replace(/([A-Z])/g, '_$1').slice(1);
@@ -351,7 +355,7 @@
         gtag('event', ga4EventName, {
           ...params,
           currency: 'BRL',
-          value: eventName === 'Purchase' ? 600 : undefined,
+          value: eventName === 'Purchase' ? 497 : undefined,
         });
       }
     },

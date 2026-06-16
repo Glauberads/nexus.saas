@@ -1558,6 +1558,26 @@ img { max-width: 100%; }
 .price-value { font-family: var(--font-plus); font-size: 80px; font-weight: 900; color: var(--white); line-height: 1; letter-spacing: -0.04em; }
 .price-installment { font-size: 13px; color: var(--gray-3); }
 
+.badge-economy {
+  margin-top: 12px;
+  display: inline-block;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: pulse-green 2s infinite;
+}
+@keyframes pulse-green {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
 .pricing-divider { height: 1px; background: var(--border); }
 
 .pricing-includes { padding: 32px 36px; }
@@ -1570,14 +1590,34 @@ img { max-width: 100%; }
   margin-bottom: 20px;
 }
 .includes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.anchoring-grid { display: flex; flex-direction: column; gap: 12px; }
 .include-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   font-size: 14px;
   color: var(--gray-1);
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255,255,255,0.05);
 }
+.include-item:last-child { border-bottom: none; padding-bottom: 0; }
 .inc-icon { font-size: 18px; flex-shrink: 0; }
+
+.anchor-item { justify-content: flex-start; }
+.anchor-item span:nth-child(2) { flex: 1; text-align: left; }
+.anchor-price { font-weight: 600; color: var(--gray-2); }
+.strike { text-decoration: line-through; color: var(--gray-3); opacity: 0.7; }
+
+.anchor-total {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: right;
+  font-size: 15px;
+  color: var(--gray-2);
+}
+.anchor-total strong { font-size: 18px; font-weight: 700; color: var(--gray-3); margin-left: 8px; }
 
 .pricing-cta-area {
   padding: 32px 36px;
@@ -1590,13 +1630,24 @@ img { max-width: 100%; }
   gap: 8px;
   font-size: 12px;
   color: var(--gray-3);
-  margin-top: 14px;
+  margin-top: 24px;
 }
-.pricing-guarantee-note {
+.cta-subtext {
   font-size: 13px;
-  color: var(--green);
+  color: var(--gray-3);
+  margin-top: 12px;
+}
+.risk-reversal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  margin-top: 24px;
+}
+.risk-reversal-list span {
+  font-size: 14px;
+  color: var(--gray-2);
   font-weight: 500;
-  margin-top: 10px;
 }
 
 /* =============================================

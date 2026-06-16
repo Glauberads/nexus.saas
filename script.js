@@ -646,6 +646,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Explicit tracking for Pricing CTA (InitiateCheckout)
+  const mainPricingCta = document.getElementById('main-cta-btn');
+  if (mainPricingCta) {
+    mainPricingCta.addEventListener('click', () => {
+      if (window.NexusTracker) {
+        window.NexusTracker.track('InitiateCheckout');
+      }
+    });
+  }
+
   // 2. View Listeners (Intersection Observer)
   const viewObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
