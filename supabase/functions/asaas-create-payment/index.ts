@@ -33,9 +33,17 @@ serve(async (req) => {
     
     if (prodErr || !product) throw new Error('Produto não encontrado.');
     if (product.status !== 'active' || !product.checkout_enabled) throw new Error('Produto não está disponível para venda.');
-    if (product.price <= 0) throw new Error('Valor inválido para o produto.');
+    
+    // Regra Hierarquia de Preços
+    const basePrice = parseFloat(product.price || 0);
+    const salePrice = parseFloat(product.sale_price || 0);
+    
+    let realPrice = basePrice;
+    if (salePrice > 0) {
+      realPrice = salePrice;
+    }
 
-    const realPrice = product.price;
+    if (realPrice <= 0) throw new Error('Valor inválido para o produto.');
 
     // 1. Procurar ou Criar Cliente no Asaas
     let customerId = null;

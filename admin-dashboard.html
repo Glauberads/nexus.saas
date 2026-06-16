@@ -717,9 +717,9 @@
             <h3 style="font-size: 11px;">Downloads Totais</h3>
             <div class="kpi-value" id="kpi-products-downloads" style="font-size: 24px;">0</div>
           </div>
-          <div class="kpi-card">
-            <h3 style="font-size: 11px;">Bônus Ativos</h3>
-            <div class="kpi-value" id="kpi-products-bonus" style="font-size: 24px;">0</div>
+          <div class="kpi-card" style="border-top: 3px solid var(--success);">
+            <h3 style="font-size: 11px;">Receita Potencial</h3>
+            <div class="kpi-value" id="kpi-products-revenue" style="font-size: 24px; color: var(--success);">R$ 0,00</div>
           </div>
         </div>
 
@@ -739,9 +739,10 @@
             <thead>
               <tr>
                 <th>Capa</th>
-                <th>Nome / Slug</th>
-                <th>Categoria</th>
-                <th>Tipo</th>
+                <th>Produto / Slug</th>
+                <th>Preço</th>
+                <th>Promo</th>
+                <th>Versão / Tipo</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -817,6 +818,39 @@
               </div>
             </div>
 
+            <!-- DADOS COMERCIAIS (PREÇO E CHECKOUT) -->
+            <div style="margin-top: 24px; margin-bottom: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+              <h4 style="margin-bottom: 16px; font-size: 14px;">Dados Comerciais (Checkout)</h4>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Checkout Ativo?</label>
+                  <select id="prod-checkout-enabled" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                    <option value="true">Sim (Visível para Compra)</option>
+                    <option value="false">Não</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Base (R$)</label>
+                  <input type="number" step="0.01" id="prod-price" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: 997.00">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--success); margin-bottom: 4px;">Preço Promocional (R$)</label>
+                  <input type="number" step="0.01" id="prod-sale-price" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--success); color: white; border-radius: 4px;" placeholder="Ex: 497.00">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL Thank You Page (Opcional)</label>
+                  <input type="text" id="prod-thank-you" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL Página de Vendas (Opcional)</label>
+                  <input type="text" id="prod-sales-page" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                </div>
+              </div>
+            </div>
+
             <div style="margin-bottom: 16px;">
               <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL da Imagem de Capa (Thumbnail)</label>
               <input type="text" id="prod-thumb" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
@@ -871,6 +905,31 @@
                 <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Carregando versões...</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- MODAL RÁPIDO: ALTERAR PREÇO -->
+        <div id="modal-quick-price" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 400px; max-width: 90%; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <h3 style="font-size: 16px; margin: 0; color: white;">💰 Alterar Preço</h3>
+              <button onclick="document.getElementById('modal-quick-price').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
+            </div>
+            
+            <input type="hidden" id="quick-price-id">
+            
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Base / Original (R$)</label>
+              <input type="number" step="0.01" id="quick-price-base" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px; font-size: 16px;" placeholder="997.00">
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+              <label style="display: block; font-size: 12px; color: var(--success); margin-bottom: 4px;">Preço Promocional (R$)</label>
+              <input type="number" step="0.01" id="quick-price-sale" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--success); color: white; border-radius: 4px; font-size: 16px;" placeholder="497.00">
+              <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Deixe 0 ou vazio para não usar promoção.</p>
+            </div>
+
+            <button onclick="window.saveQuickPrice()" class="btn-primary" style="width: 100%; background: var(--success); color: #000; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Salvar Preço</button>
           </div>
         </div>
 

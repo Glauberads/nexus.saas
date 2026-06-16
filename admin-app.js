@@ -1469,7 +1469,7 @@ async function loadGatewaysModule() {
 }
 
 // ==========================================
-// 12.1. PRODUTOS (CMS)
+// 12.1. PRODUTOS (CMS) E PREÇOS
 // ==========================================
 let currentEditingProductId = null;
 
@@ -1482,17 +1482,24 @@ async function loadProductsModule() {
 
   const active = products ? products.filter(p => p.status === 'active') : [];
   const bonus = products ? products.filter(p => p.is_bonus && p.status === 'active') : [];
+  
+  let potentialRevenue = 0;
+  active.forEach(p => {
+    const pPrice = parseFloat(p.price || 0);
+    const sPrice = parseFloat(p.sale_price || 0);
+    potentialRevenue += (sPrice > 0 ? sPrice : pPrice);
+  });
 
   document.getElementById('kpi-products-active').textContent = active.length;
   document.getElementById('kpi-products-versions').textContent = versions ? versions.length : 0;
   document.getElementById('kpi-products-downloads').textContent = downloads ? downloads.length : 0;
-  document.getElementById('kpi-products-bonus').textContent = bonus.length;
+  document.getElementById('kpi-products-revenue').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(potentialRevenue);
 
   const tbody = document.getElementById('products-tbody');
   tbody.innerHTML = '';
 
   if (!products || products.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum produto cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Nenhum produto cadastrado.</td></tr>';
     return;
   }
 
@@ -1500,7 +1507,10 @@ async function loadProductsModule() {
     const tr = document.createElement('tr');
     const statusColor = p.status === 'active' ? 'var(--success)' : (p.status === 'draft' ? '#F59E0B' : 'var(--danger)');
     
-    // Find current version
+    const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: p.currency || 'BRL' });
+    const pPrice = parseFloat(p.price || 0);
+    const sPrice = parseFloat(p.sale_price || 0);
+
     const pVersions = versions ? versions.filter(v => v.product_id === p.id) : [];
     const currentV = pVersions.find(v => v.is_current) || pVersions[0];
     const vText = currentV ? currentV.version : 'Sem versão';
@@ -1513,18 +1523,47 @@ async function loadProductsModule() {
         <div style="font-weight: 600;">${p.name} ${p.is_featured ? '⭐' : ''}</div>
         <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">/${p.slug}</div>
       </td>
-      <td>${p.category || 'Geral'}</td>
+      <td style="font-weight: 600;">${formatter.format(pPrice)}</td>
+      <td style="color: var(--success); font-weight: 600;">${sPrice > 0 ? formatter.format(sPrice) : '-'}</td>
       <td>
-        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B; text-transform: uppercase;">${p.access_type || 'core'}</span>
+        <span style="display: block; font-size: 12px; font-weight: 600;">${vText}</span>
+        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B; text-transform: uppercase; font-size: 9px;">${p.access_type || 'core'}</span>
       </td>
       <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${p.status}</td>
       <td>
-        <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Editar</button>
-        <button onclick="window.openVersionsModal('${p.id}', '${p.name}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Versões</button>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 200px;">
+          <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️ Editar</button>
+          <button onclick="window.openQuickPrice('${p.id}', ${pPrice}, ${sPrice})" style="background: none; border: 1px solid var(--border); color: var(--success); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">💰 Preço</button>
+          <button onclick="window.openVersionsModal('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">📦 Versões</button>
+          <button onclick="window.open('checkout.html?product=${p.checkout_slug || p.slug}', '_blank')" style="background: none; border: 1px solid var(--border); color: #3B82F6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">🚀 Checkout</button>
+        </div>
       </td>
     `;
     tbody.appendChild(tr);
   });
+}
+
+window.openQuickPrice = function(id, basePrice, salePrice) {
+  document.getElementById('quick-price-id').value = id;
+  document.getElementById('quick-price-base').value = basePrice;
+  document.getElementById('quick-price-sale').value = salePrice > 0 ? salePrice : '';
+  document.getElementById('modal-quick-price').style.display = 'flex';
+}
+
+window.saveQuickPrice = async function() {
+  const id = document.getElementById('quick-price-id').value;
+  const basePrice = document.getElementById('quick-price-base').value || 0;
+  const salePrice = document.getElementById('quick-price-sale').value || 0;
+
+  if (!id) return;
+  
+  await supabaseClient.from('products').update({
+    price: parseFloat(basePrice),
+    sale_price: parseFloat(salePrice)
+  }).eq('id', id);
+
+  document.getElementById('modal-quick-price').style.display = 'none';
+  loadProductsModule();
 }
 
 window.openProductModal = function() {
@@ -1532,13 +1571,14 @@ window.openProductModal = function() {
   document.getElementById('modal-product-title').textContent = 'Novo Produto';
   
   // Clear fields
-  ['prod-name', 'prod-slug', 'prod-desc', 'prod-cat', 'prod-thumb', 'prod-video', 'prod-doc'].forEach(id => {
-    document.getElementById(id).value = '';
+  ['prod-name', 'prod-slug', 'prod-desc', 'prod-cat', 'prod-thumb', 'prod-video', 'prod-doc', 'prod-price', 'prod-sale-price', 'prod-thank-you', 'prod-sales-page'].forEach(id => {
+    if(document.getElementById(id)) document.getElementById(id).value = '';
   });
   document.getElementById('prod-type').value = 'core';
   document.getElementById('prod-status').value = 'active';
   document.getElementById('prod-license').value = 'true';
   document.getElementById('prod-featured').value = 'false';
+  if(document.getElementById('prod-checkout-enabled')) document.getElementById('prod-checkout-enabled').value = 'true';
   
   document.getElementById('modal-product').style.display = 'flex';
 }
@@ -1561,6 +1601,13 @@ window.editProduct = async function(id) {
     document.getElementById('prod-video').value = p.video_url || '';
     document.getElementById('prod-doc').value = p.documentation_url || '';
     
+    // Novos campos
+    if(document.getElementById('prod-price')) document.getElementById('prod-price').value = p.price || '';
+    if(document.getElementById('prod-sale-price')) document.getElementById('prod-sale-price').value = p.sale_price || '';
+    if(document.getElementById('prod-thank-you')) document.getElementById('prod-thank-you').value = p.thank_you_url || '';
+    if(document.getElementById('prod-sales-page')) document.getElementById('prod-sales-page').value = p.sales_page_url || '';
+    if(document.getElementById('prod-checkout-enabled')) document.getElementById('prod-checkout-enabled').value = p.checkout_enabled ? 'true' : 'false';
+
     document.getElementById('modal-product').style.display = 'flex';
   }
 }
@@ -1578,12 +1625,23 @@ window.saveProduct = async function() {
     is_bonus: document.getElementById('prod-type').value === 'bonus',
     thumbnail_url: document.getElementById('prod-thumb').value,
     video_url: document.getElementById('prod-video').value,
-    documentation_url: document.getElementById('prod-doc').value
+    documentation_url: document.getElementById('prod-doc').value,
   };
+
+  if(document.getElementById('prod-price')) payload.price = parseFloat(document.getElementById('prod-price').value || 0);
+  if(document.getElementById('prod-sale-price')) payload.sale_price = parseFloat(document.getElementById('prod-sale-price').value || 0);
+  if(document.getElementById('prod-thank-you')) payload.thank_you_url = document.getElementById('prod-thank-you').value;
+  if(document.getElementById('prod-sales-page')) payload.sales_page_url = document.getElementById('prod-sales-page').value;
+  if(document.getElementById('prod-checkout-enabled')) payload.checkout_enabled = document.getElementById('prod-checkout-enabled').value === 'true';
 
   if (!payload.name || !payload.slug) {
     alert("Nome e Slug são obrigatórios.");
     return;
+  }
+
+  // Preencher checkout_slug automaticamente na criação
+  if (!currentEditingProductId) {
+    payload.checkout_slug = payload.slug;
   }
 
   if (currentEditingProductId) {

@@ -48,7 +48,24 @@ async function initCheckout(config) {
   // Preencher UI
   document.getElementById('product-name').textContent = product.name;
   document.getElementById('product-desc').textContent = product.description || '';
-  document.getElementById('product-price').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: product.currency || 'BRL' }).format(product.price);
+  
+  const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: product.currency || 'BRL' });
+  const basePrice = parseFloat(product.price || 0);
+  const salePrice = parseFloat(product.sale_price || 0);
+  
+  const priceContainer = document.getElementById('product-price');
+  
+  if (salePrice > 0) {
+    priceContainer.innerHTML = `
+      <span style="font-size: 14px; text-decoration: line-through; color: var(--text-muted); display: block; margin-bottom: 4px;">De ${formatter.format(basePrice)}</span>
+      <span style="font-size: 32px; font-weight: 800; color: var(--success);">Por ${formatter.format(salePrice)}</span>
+    `;
+    currentProduct.finalPrice = salePrice;
+  } else {
+    priceContainer.textContent = formatter.format(basePrice);
+    currentProduct.finalPrice = basePrice;
+  }
+
   if (product.thumbnail_url) {
     document.getElementById('product-cover').style.backgroundImage = `url('${product.thumbnail_url}')`;
   }
