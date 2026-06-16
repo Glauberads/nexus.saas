@@ -51,6 +51,12 @@
         </div>
       </div>
       <div class="topbar-right">
+        <select id="global-date-filter" style="background: var(--bg-main); color: var(--text-primary); border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; outline: none; font-size: 13px;">
+          <option value="hoje">Hoje</option>
+          <option value="7d">Últimos 7 Dias</option>
+          <option value="30d">Últimos 30 Dias</option>
+          <option value="tudo" selected>Todo o Período</option>
+        </select>
         <span class="badge success hide-mobile">Realtime Ativo</span>
         <div class="user-profile">
           <div class="user-avatar">GL</div>
@@ -112,14 +118,14 @@
         <div class="charts-grid">
           <div class="chart-card">
             <h3>Origem de Tráfego</h3>
-            <div style="height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius-sm);">
-              [Gráfico de Tráfego: Chart.js Container]
+            <div style="height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+              <canvas id="trafficChart"></canvas>
             </div>
           </div>
           <div class="chart-card">
             <h3>Temperatura da Base</h3>
-            <div style="height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); border: 1px dashed var(--border); border-radius: var(--radius-sm);">
-              [Gráfico Rosca: Chart.js Container]
+            <div style="height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+              <canvas id="temperatureChart"></canvas>
             </div>
           </div>
         </div>
@@ -166,9 +172,10 @@
         <p style="color: var(--text-secondary); margin-bottom: 24px;">Acompanhamento de perda entre etapas (Em breve: visualização completa).</p>
         <div class="kpi-grid">
           <div class="kpi-card"><h3>Visitantes</h3><div class="kpi-value">1.402</div></div>
-          <div class="kpi-card"><h3>Leads</h3><div class="kpi-value">345</div></div>
-          <div class="kpi-card"><h3>Checkouts</h3><div class="kpi-value">82</div></div>
-          <div class="kpi-card" style="border-color: var(--success);"><h3 style="color: var(--success);">Vendas</h3><div class="kpi-value" style="color: var(--success);">14</div></div>
+          <div class="kpi-card" style="border-color: var(--success);"><h3 style="color: var(--success);">Purchase</h3><div class="kpi-value" style="color: var(--success);" id="funnel-purchase">--</div></div>
+        </div>
+        <div style="margin-top: 24px; padding: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <p style="font-size: 13px; color: var(--text-secondary);" id="funnel-metrics">Carregando taxas de conversão...</p>
         </div>
       </section>
 
@@ -176,7 +183,25 @@
       <section id="module-vendas" class="module-section"><h2>Vendas</h2><p style="color: var(--text-muted)">Carregando dados financeiros...</p></section>
       <section id="module-campaigns" class="module-section"><h2>Campanhas (UTM)</h2><p style="color: var(--text-muted)">Carregando tracking multi-touch...</p></section>
       <section id="module-ads" class="module-section"><h2>Meta & Google Ads</h2><p style="color: var(--text-muted)">Conectando APIs de parceiros...</p></section>
-      <section id="module-events" class="module-section"><h2>Eventos em Tempo Real</h2><p style="color: var(--text-muted)">Escutando webhooks Supabase Realtime...</p></section>
+      <section id="module-events" class="module-section">
+        <h2>Eventos em Tempo Real</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Fluxo instantâneo de interações do banco de dados.</p>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Horário</th>
+                <th>Evento</th>
+                <th>Sessão / Lead</th>
+                <th>Payload</th>
+              </tr>
+            </thead>
+            <tbody id="realtime-feed">
+              <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Aguardando eventos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
       <section id="module-config" class="module-section"><h2>Configurações do Sistema</h2><p style="color: var(--text-muted)">Ajustes de Pixel, GA4 e Edge Functions.</p></section>
 
     </div>
