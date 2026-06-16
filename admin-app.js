@@ -1600,7 +1600,7 @@ let currentEditingProductId = null;
 async function loadProductsModule() {
   if (!supabaseClient) return;
 
-  const { data: products } = await supabaseClient.from('products').select('*').order('sort_order', { ascending: true });
+  const { data: products } = await supabaseClient.from('products').select('*').order('created_at', { ascending: true });
   const { data: versions } = await supabaseClient.from('product_versions').select('*');
   const { data: downloads } = await supabaseClient.from('member_downloads').select('id');
 
@@ -1614,10 +1614,11 @@ async function loadProductsModule() {
     potentialRevenue += (sPrice > 0 ? sPrice : pPrice);
   });
 
-  document.getElementById('kpi-products-active').textContent = active.length;
-  document.getElementById('kpi-products-versions').textContent = versions ? versions.length : 0;
-  document.getElementById('kpi-products-downloads').textContent = downloads ? downloads.length : 0;
-  document.getElementById('kpi-products-revenue').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(potentialRevenue);
+  if(document.getElementById('kpi-products-active')) document.getElementById('kpi-products-active').textContent = active.length;
+  if(document.getElementById('kpi-products-versions')) document.getElementById('kpi-products-versions').textContent = versions ? versions.length : 0;
+  if(document.getElementById('kpi-products-downloads')) document.getElementById('kpi-products-downloads').textContent = downloads ? downloads.length : 0;
+  if(document.getElementById('kpi-products-revenue')) document.getElementById('kpi-products-revenue').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(potentialRevenue);
+  if(document.getElementById('kpi-products-bonus')) document.getElementById('kpi-products-bonus').textContent = bonus.length;
 
   const tbody = document.getElementById('products-tbody');
   tbody.innerHTML = '';
