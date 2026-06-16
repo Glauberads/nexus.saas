@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | NexusSaaS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: #121214;
+      --border: #27272a;
+      --text: #ededed;
+      --muted: #a1a1aa;
+      --accent: #FF6B00;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; }
+    
+    /* Sidebar */
+    aside { width: 250px; background: var(--card); border-right: 1px solid var(--border); height: 100vh; padding: 1.5rem; position: fixed; }
+    aside h2 { color: var(--accent); margin-bottom: 2rem; font-size: 1.5rem; }
+    aside ul { list-style: none; }
+    aside ul li { margin-bottom: 1rem; }
+    aside ul li a { color: var(--muted); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+    aside ul li a:hover, aside ul li a.active { color: var(--text); }
+    
+    /* Main Content */
+    main { margin-left: 250px; padding: 2rem; width: calc(100% - 250px); }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    header h1 { font-size: 2rem; }
+    .btn-refresh { background: var(--border); color: var(--text); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+    .btn-refresh:hover { background: #3f3f46; }
+
+    /* KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+    .kpi-card { background: var(--card); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; }
+    .kpi-card h3 { color: var(--muted); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .kpi-card .value { font-size: 2rem; font-weight: 700; color: var(--text); }
+    .kpi-card .trend { font-size: 0.875rem; color: var(--success); margin-top: 0.5rem; display: block; }
+    
+    /* Charts */
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .chart-card { background: var(--card); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; }
+    .chart-card h3 { margin-bottom: 1rem; font-size: 1.125rem; }
+    
+    /* Tables */
+    .table-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .table-card h3 { padding: 1.5rem; border-bottom: 1px solid var(--border); font-size: 1.125rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem 1.5rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: rgba(255,255,255,0.02); color: var(--muted); font-size: 0.875rem; text-transform: uppercase; }
+    .badge { padding: 0.25rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge.frio { background: rgba(59, 130, 246, 0.1); color: var(--info); }
+    .badge.morno { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .badge.quente { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+    .badge.muito-quente { background: rgba(255, 107, 0, 0.2); color: var(--accent); }
+    
+  </style>
+</head>
+<body>
+
+  <aside>
+    <h2>NexusAdmin</h2>
+    <ul>
+      <li><a href="#" class="active">Visão Geral</a></li>
+      <li><a href="#">Campanhas UTMs</a></li>
+      <li><a href="#">Jornada do Lead</a></li>
+      <li><a href="#">Recuperações</a></li>
+    </ul>
+  </aside>
+
+  <main>
+    <header>
+      <h1>Dashboard de Atribuição</h1>
+      <button class="btn-refresh" onclick="loadData()">Atualizar Dados</button>
+    </header>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <h3>Total Sessions</h3>
+        <div class="value" id="kpi-sessions">--</div>
+        <span class="trend">+12% vs last 7 days</span>
+      </div>
+      <div class="kpi-card">
+        <h3>Leads (Opt-ins)</h3>
+        <div class="value" id="kpi-leads">--</div>
+        <span class="trend">+5% vs last 7 days</span>
+      </div>
+      <div class="kpi-card">
+        <h3>Quentes / Muito Quentes</h3>
+        <div class="value" id="kpi-hot" style="color: var(--accent)">--</div>
+        <span class="trend">Ready to Buy</span>
+      </div>
+      <div class="kpi-card">
+        <h3>Taxa de Conversão</h3>
+        <div class="value" id="kpi-conv">--%</div>
+        <span class="trend">Média Geral</span>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>Aquisição por UTM Source (Tráfego)</h3>
+        <canvas id="trafficChart" height="100"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Temperatura dos Leads</h3>
+        <canvas id="temperatureChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h3>Leads Mais Quentes (Ação Recomendada)</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Score</th>
+            <th>Temperatura</th>
+            <th>Origem (Source/Campaign)</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <tr><td colspan="5" style="text-align: center; color: var(--muted);">Carregando leads...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="tracking.js"></script>
+  <script src="supabase-client.js"></script>
+  <script>
+    let trafficChartInstance = null;
+    let tempChartInstance = null;
+
+    async function loadData() {
+      if (!window.NexusDB) return;
+      
+      const kpis = await window.NexusDB.getKPIs();
+      if (!kpis.totalLeads) return;
+
+      // Update KPIs
+      document.getElementById('kpi-sessions').textContent = kpis.sessions || 0;
+      document.getElementById('kpi-leads').textContent = kpis.totalLeads;
+      document.getElementById('kpi-hot').textContent = kpis.hotLeads;
+      
+      const convRate = kpis.sessions > 0 ? ((kpis.totalLeads / kpis.sessions) * 100).toFixed(1) : 0;
+      document.getElementById('kpi-conv').textContent = `${convRate}%`;
+
+      // Render Charts
+      renderCharts(kpis);
+
+      // Load Hot Leads
+      const leads = await window.NexusDB.getLeads(10, 0);
+      const tbody = document.getElementById('leads-tbody');
+      tbody.innerHTML = '';
+      
+      leads.filter(l => l.lead_score >= 26).sort((a,b) => b.lead_score - a.lead_score).forEach(l => {
+        const tr = document.createElement('tr');
+        const badgeClass = l.lead_tier.toLowerCase().replace(' ', '-');
+        tr.innerHTML = `
+          <td>${l.email || l.whatsapp || 'Anônimo'}</td>
+          <td><strong>${l.lead_score}</strong> pts</td>
+          <td><span class="badge ${badgeClass}">${l.lead_tier}</span></td>
+          <td>${l.utm_source || 'direct'} / ${l.utm_campaign || '-'}</td>
+          <td><button class="btn-refresh" style="font-size:0.75rem">Ver Jornada</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderCharts(kpis) {
+      const sources = Object.keys(kpis.bySource || {});
+      const sourceData = Object.values(kpis.bySource || {});
+
+      // Traffic Bar Chart
+      const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
+      if (trafficChartInstance) trafficChartInstance.destroy();
+      trafficChartInstance = new Chart(ctxTraffic, {
+        type: 'bar',
+        data: {
+          labels: sources,
+          datasets: [{
+            label: 'Leads por Source',
+            data: sourceData,
+            backgroundColor: '#FF6B00',
+            borderRadius: 4
+          }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, grid: { color: '#27272a' } }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+      });
+
+      // Temperature Doughnut Chart
+      const ctxTemp = document.getElementById('temperatureChart').getContext('2d');
+      if (tempChartInstance) tempChartInstance.destroy();
+      tempChartInstance = new Chart(ctxTemp, {
+        type: 'doughnut',
+        data: {
+          labels: ['Frio', 'Morno', 'Quente/Muito Quente'],
+          datasets: [{
+            data: [
+              kpis.coldLeads || 0,
+              kpis.warmLeads || 0,
+              kpis.hotLeads || 0
+            ],
+            backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444'],
+            borderWidth: 0
+          }]
+        },
+        options: { responsive: true, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: '#ededed' } } } }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>

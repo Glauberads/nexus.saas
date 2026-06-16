@@ -1,0 +1,90 @@
+# Contexto do Projeto NexusSaaS
+
+## Identidade e Posicionamento
+- **Nome do Produto**: NexusSaaS
+- **Checkout**: `https://membros.glauberads.com.br/c/jy773ql`
+- **Missão**: Fornecer um marketplace com mais de 30 sistemas SaaS prontos ("white-label") para que Infoprodutores, Agências Digitais, Gestores de Tráfego, Afiliados e Freelancers possam lançar produtos próprios e monetizar rapidamente, pulando os meses de desenvolvimento.
+- **Identidade Visual**: Premium, internacional, baseada em referências como Stripe, Linear, Vercel e Framer. Uso de modo escuro (Dark Mode) com tons de cinza escuro, branco puro e um tom vibrante de laranja (Accent).
+
+## Fase 1: Estrutura da Landing Page (HTML/CSS)
+A página (`index.html`) é composta por seções otimizadas para conversão e performance (UX/UI Premium):
+
+1. **Header/Nav**: Navegação responsiva com links principais e CTA de checkout.
+2. **Hero Section**: Headline forte e animada, subheadline focada em tempo de entrega, tags de prova social e um Mockup visual imponente.
+3. **VSL (Video Sales Letter)**: Espaço reservado para vídeo focado em conversão e explicação da plataforma.
+4. **Para Quem É**: Cards interativos identificando o público-alvo.
+5. **Pain Section (Dor)**: Tabela comparativa "Do jeito difícil (❌)" vs "Com a NexusSaaS (✅)".
+6. **Lead Magnet**: Formulário estratégico para captar leads (Nome, Email, WhatsApp).
+7. **Process (How it works)**: Timeline de 4 passos simples.
+8. **Systems Gallery**: Cards dos sistemas mais vendidos.
+9. **Calculadora de Faturamento**: Simulador interativo que projeta ganhos mensais e anuais.
+10. **Value Perception (Precificação)**: Tabela de Ancoragem (R$ 8.485+ vs R$ 600).
+11. **Comparativo**: Tabela técnica detalhada "NexusSaaS vs Desenvolvimento do Zero".
+12. **Testimonials**: Cards simulando mensagens de WhatsApp com depoimentos e ROI de clientes.
+13. **FAQ**: Accordion expansível de perguntas frequentes.
+14. **Final CTA**: Botão forte final focado em fechar a venda com gatilhos de garantia.
+15. **Modais de Growth (Exit Intent e Quiz)**: Estruturas de retenção e qualificação de visitantes.
+
+## Fase 2: Escala e Otimização Avançada
+
+Implementamos um ecossistema avançado de captação de dados, dashboards e funis de recuperação de vendas (Fase 2) para transformar a NexusSaaS em uma máquina robusta de aquisição no Google e Meta Ads.
+
+### O Motor `tracking.js` Avançado
+- **Lead Scoring System de 4 Níveis**: Os usuários recebem pontos com base na interação (scroll, faq, tempo, vídeo) e são classificados em 4 níveis de temperatura:
+  - Frio (0-25)
+  - Morno (26-50)
+  - Quente (51-75) → Dispara o evento `QualifiedLead` para o Meta e GA4.
+  - Muito Quente (76-100) → Dispara o evento `ReadyToBuy` para remarketing de altíssima conversão.
+- **Rastreamento Multi-Canal**: Suporte nativo para tags do Google Ads (`gtag conversion`) lado a lado com o Pixel da Meta e o CAPI.
+
+### O Cliente Supabase (`supabase-client.js`)
+Lida com a integração em tempo real com o banco de dados e foi expandido com:
+- **Jornada do Lead (`lead_journey`)**: Função que grava cada clique crucial na linha do tempo do usuário (view_upsell, upsell_accept, cart_abandon, etc).
+- **Atribuição Multi-Touch (`attribution`)**: Módulo pronto para salvar a origem do primeiro e último clique para rastreamento transparente de ROAS.
+
+### O Novo Quiz de Alta Qualificação
+O Quiz no `index.html` foi transformado em um funil de 4 passos (Diagnóstico de Objetivo, Faturamento Atual, Conhecimento Técnico e Urgência). Dependendo das respostas do usuário, o sistema injeta "pontos extras" no Score Global, podendo classificar o usuário imediatamente como "Alto Potencial", o que adapta o texto final exibido para o lead.
+
+### Dashboard Administrativo Executivo
+Página `admin-dashboard.html` privada e conectada diretamente ao Supabase para fornecer análise em tempo real sem precisar abrir o Meta Ads:
+- **Painel de Atribuição**: Gráfico com o tráfego mapeado por UTM_Source e termômetro circular dividindo a base de leads em Frios, Mornos e Quentes.
+- **Leads Qualificados**: Uma tabela listando dinamicamente os Leads Quentes/Muito Quentes, exibindo score, contato e origem para contato comercial ativo, se necessário.
+
+### Funil de Upsell 1-Click
+Página `upsell.html` projetada para aparecer após a compra principal, focada na conversão do serviço premium de **Instalação Profissional (Done For You)** por R$ 297, contendo rastreamento nativo de `UpsellAccept` e `UpsellDecline`.
+
+---
+
+## Estrutura Backend Serverless (Supabase Edge Functions)
+
+O projeto utiliza funções backend para envio de dados sigilosos e contorno de AdBlockers:
+
+1. **`capi-relay`**:
+   - Atua como um servidor CAPI (Conversions API). Envia de forma Server-side as conversões para o Facebook Graph API usando o Access Token oculto (`META_CAPI_TOKEN`), mascarando o IP do servidor e deduzindo pelo Event ID.
+
+2. **`purchase-webhook`**:
+   - Endpoint destinado a receber pings de compra (status: approved) de plataformas como Hotmart/Kiwify e atualizar o `lead_status` para `purchased`.
+
+3. **`abandonment-recovery` (NOVO - Fase 2)**:
+   - Endpoint destinado a receber o aviso de "abandono de carrinho" ou "compra cancelada".
+   - Atualiza o CRM (tabela leads) para `checkout_abandoned`.
+   - Dispara em tempo real o evento `CheckoutAbandoned` na API de Conversões do Meta, enriquecendo o público de remarketing antes mesmo que o usuário abra o Instagram novamente.
+   - Estrutura pronta para conectar via POST (webhook) no n8n ou ActiveCampaign no futuro.
+
+---
+
+## Estrutura do Banco de Dados (`sql/schema.sql`)
+1. **`leads`**: CRM Principal. Contém Nome, WhatsApp, Email Hash (para Meta), Lead Score, Lead Tier, Lead Status, Respostas do Quiz e **LTV** (Life Time Value).
+2. **`sessions`**: Rastreamento de sessões com UTMs e persistência de IDs de cookies.
+3. **`events`**: Log cru de todos os eventos disparados no frontend.
+4. **`purchases`**: Base de vendas e valores recebidos via Webhooks de pagamento.
+5. **`lead_journey`**: Tabela em formato de Timeline (Histórico de ações detalhado por usuário).
+6. **`attribution`**: Tabela para mapeamento do First Touch e Last Touch.
+
+## Status da Implementação Completa (Fase 1 e 2)
+✅ Todos os arquivos HTML, CSS, e JS estruturados e otimizados.
+✅ Score inteligente rodando e enviando tags baseadas na temperatura do Lead.
+✅ Painel Executivo (Admin) rodando localmente, gerando gráficos usando Chart.js via Supabase.
+✅ Funil de Upsell ativo e com rastreamento implementado.
+✅ Recuperação de vendas (Webhook Backend) operante.
+✅ Todo o código versionado na pasta local.
