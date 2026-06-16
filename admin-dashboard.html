@@ -208,7 +208,123 @@
       <!-- OUTROS MÓDULOS OMITIDOS PARA BREVIDADE (ESTRUTURA MANTIDA NO ROUTER) -->
       <section id="module-vendas" class="module-section"><h2>Vendas</h2><p style="color: var(--text-muted)">Carregando dados financeiros...</p></section>
       <section id="module-campaigns" class="module-section"><h2>Campanhas (UTM)</h2><p style="color: var(--text-muted)">Carregando tracking multi-touch...</p></section>
-      <section id="module-ads" class="module-section"><h2>Meta & Google Ads</h2><p style="color: var(--text-muted)">Conectando APIs de parceiros...</p></section>
+      <!-- MODULE 5: META & GOOGLE ADS (ROAS) -->
+      <section id="module-ads" class="module-section">
+        <h2>Meta & Google Ads (ROAS Tracker)</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 24px;">Visão consolidada de investimento, receita e ROAS importados via n8n.</p>
+
+        <!-- KPIs Macroeconômicos -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <h3>Investimento</h3>
+            <div class="kpi-value" id="kpi-ads-spend">R$ 0,00</div>
+          </div>
+          <div class="kpi-card">
+            <h3>Receita (Atribuída)</h3>
+            <div class="kpi-value" id="kpi-ads-revenue" style="color: var(--success);">R$ 0,00</div>
+          </div>
+          <div class="kpi-card" style="border-left: 3px solid var(--accent);">
+            <h3 style="color: var(--accent);">ROAS Global</h3>
+            <div class="kpi-value" id="kpi-ads-roas" style="color: var(--accent);">0.0x</div>
+          </div>
+          <div class="kpi-card">
+            <h3>CPL Geral</h3>
+            <div class="kpi-value" id="kpi-ads-cpl">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 32px;">
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">CPA</h3>
+            <div class="kpi-value" id="kpi-ads-cpa" style="font-size: 20px;">R$ 0</div>
+          </div>
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">Cliques</h3>
+            <div class="kpi-value" id="kpi-ads-clicks" style="font-size: 20px;">0</div>
+          </div>
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">Leads</h3>
+            <div class="kpi-value" id="kpi-ads-leads" style="font-size: 20px;">0</div>
+          </div>
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">Compras</h3>
+            <div class="kpi-value" id="kpi-ads-purchases" style="font-size: 20px;">0</div>
+          </div>
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">CTR</h3>
+            <div class="kpi-value" id="kpi-ads-ctr" style="font-size: 20px;">0%</div>
+          </div>
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">CPC</h3>
+            <div class="kpi-value" id="kpi-ads-cpc" style="font-size: 20px;">R$ 0</div>
+          </div>
+          <div class="kpi-card" style="padding: 16px;">
+            <h3 style="font-size: 11px;">CPM</h3>
+            <div class="kpi-value" id="kpi-ads-cpm" style="font-size: 20px;">R$ 0</div>
+          </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="charts-grid" style="grid-template-columns: 2fr 1fr;">
+          <div class="chart-card">
+            <h3>Gasto vs Receita (Evolução Diária)</h3>
+            <div style="height: 300px; display: flex; align-items: center; justify-content: center; position: relative;">
+              <canvas id="adsSpendChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <h3>Investimento por Plataforma</h3>
+            <div style="height: 300px; display: flex; align-items: center; justify-content: center; position: relative;">
+              <canvas id="adsPlatformChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabelas de Detalhamento -->
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Resumo por Plataforma</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Plataforma</th>
+                <th>Investimento</th>
+                <th>Receita</th>
+                <th>ROAS</th>
+                <th>Cliques</th>
+                <th>Custo/Clique</th>
+              </tr>
+            </thead>
+            <tbody id="ads-platform-tbody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Carregando métricas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-card" style="margin-top: 32px;">
+          <div class="table-header">
+            <h3>Detalhamento por Campanha</h3>
+          </div>
+          <table style="font-size: 13px;">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Plataforma</th>
+                <th>ID Campanha</th>
+                <th>Nome Campanha</th>
+                <th>Spend</th>
+                <th>Cliques</th>
+                <th>Impr.</th>
+              </tr>
+            </thead>
+            <tbody id="ads-campaigns-tbody">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Carregando métricas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </section>
       <!-- MODULE 6: WEBHOOKS -->
       <section id="module-webhooks" class="module-section">
         <h2>Central de Webhooks</h2>

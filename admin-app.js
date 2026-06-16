@@ -158,6 +158,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-general-logs') await loadGeneralLogsModule();
   else if (moduleId === 'module-automations') await loadAutomationsModule();
   else if (moduleId === 'module-whatsapp-crm') await loadWhatsappCrmModule();
+  else if (moduleId === 'module-ads') await loadAdsModule();
 }
 
 // --- DASHBOARD ---
@@ -187,9 +188,23 @@ async function loadDashboard() {
     qPurch = applyDateFilter(qPurch);
     const { data: purchases } = await qPurch;
     
-    const receita = (purchases || []).reduce((acc, p) => acc + (p.amount || 497), 0);
-    // Para o ROAS Global, se não houver tabela de custo ainda, exibimos a Receita e aviso
-    document.getElementById('kpi-roas').textContent = `R$ ${receita.toLocaleString('pt-BR')}`;
+    let qAds = supabaseClient.from('ad_metrics').select('spend');
+    qAds = applyDateFilter(qAds);
+    const { data: adMetrics } = await qAds;
+
+    const receita = (purchases || []).reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
+    const spend = (adMetrics || []).reduce((acc, a) => acc + (parseFloat(a.spend) || 0), 0);
+    
+    const globalRoas = spend > 0 ? (receita / spend) : 0;
+
+    const roasEl = document.getElementById('kpi-roas');
+    if (roasEl) {
+      if (spend > 0) {
+         roasEl.textContent = `${globalRoas.toFixed(2)}x`;
+      } else {
+         roasEl.textContent = `R$ ${receita.toLocaleString('pt-BR')}`;
+      }
+    }
     
     // WIDGET: Leads Quentes Agora
     const tbody = document.getElementById('hot-leads-tbody');
@@ -1240,7 +1255,171 @@ function renderKanbanBadges() {
 }
 
 // ==========================================
-// 11. CENTRO DE NOTIFICAÇÕES (Sino)
+// 11. ADS & ROAS (Meta & Google)
+// ==========================================
+let adsSpendChartInstance = null;
+let adsPlatformChartInstance = null;
+
+async function loadAdsModule() {
+  if (!supabaseClient) return;
+
+  const dateFilter = getFilterDate();
+  
+  let qMetrics = supabaseClient.from('ad_metrics').select('*');
+  let qPurchases = supabaseClient.from('purchases').select('*');
+  let qLeads = supabaseClient.from('leads').select('id, created_at, utm_source');
+
+  if (dateFilter) {
+    qMetrics = qMetrics.gte('date', dateFilter);
+    qPurchases = qPurchases.gte('created_at', dateFilter);
+    qLeads = qLeads.gte('created_at', dateFilter);
+  }
+
+  const [{ data: metrics }, { data: purchases }, { data: leads }] = await Promise.all([
+    qMetrics, qPurchases, qLeads
+  ]);
+
+  if (!metrics) return;
+
+  // KPIs
+  const totalSpend = metrics.reduce((acc, m) => acc + (parseFloat(m.spend) || 0), 0);
+  const totalClicks = metrics.reduce((acc, m) => acc + (m.clicks || 0), 0);
+  const totalImpressions = metrics.reduce((acc, m) => acc + (m.impressions || 0), 0);
+  
+  const totalRevenue = (purchases || []).reduce((acc, p) => acc + (parseFloat(p.amount) || 0), 0);
+  const totalLeads = leads ? leads.length : 0;
+  const totalPurchases = purchases ? purchases.length : 0;
+
+  const roas = totalSpend > 0 ? (totalRevenue / totalSpend) : 0;
+  const cpl = totalLeads > 0 ? (totalSpend / totalLeads) : 0;
+  const cpa = totalPurchases > 0 ? (totalSpend / totalPurchases) : 0;
+  const ctr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100) : 0;
+  const cpc = totalClicks > 0 ? (totalSpend / totalClicks) : 0;
+  const cpm = totalImpressions > 0 ? ((totalSpend / totalImpressions) * 1000) : 0;
+
+  document.getElementById('kpi-ads-spend').textContent = `R$ ${totalSpend.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+  document.getElementById('kpi-ads-revenue').textContent = `R$ ${totalRevenue.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+  document.getElementById('kpi-ads-roas').textContent = `${roas.toFixed(2)}x`;
+  document.getElementById('kpi-ads-cpl').textContent = `R$ ${cpl.toFixed(2)}`;
+  document.getElementById('kpi-ads-cpa').textContent = `R$ ${cpa.toFixed(2)}`;
+  document.getElementById('kpi-ads-clicks').textContent = totalClicks.toLocaleString('pt-BR');
+  document.getElementById('kpi-ads-leads').textContent = totalLeads;
+  document.getElementById('kpi-ads-purchases').textContent = totalPurchases;
+  document.getElementById('kpi-ads-ctr').textContent = `${ctr.toFixed(2)}%`;
+  document.getElementById('kpi-ads-cpc').textContent = `R$ ${cpc.toFixed(2)}`;
+  document.getElementById('kpi-ads-cpm').textContent = `R$ ${cpm.toFixed(2)}`;
+
+  // Agrupamentos
+  const byPlatform = {};
+  const byDate = {};
+  
+  metrics.forEach(m => {
+    // Por plataforma
+    if (!byPlatform[m.platform]) byPlatform[m.platform] = { spend: 0, clicks: 0 };
+    byPlatform[m.platform].spend += parseFloat(m.spend);
+    byPlatform[m.platform].clicks += m.clicks;
+    
+    // Por Data
+    const dateStr = m.date;
+    if (!byDate[dateStr]) byDate[dateStr] = { spend: 0, revenue: 0 };
+    byDate[dateStr].spend += parseFloat(m.spend);
+  });
+
+  if (purchases) {
+    purchases.forEach(p => {
+      const dateStr = p.created_at.split('T')[0];
+      if (!byDate[dateStr]) byDate[dateStr] = { spend: 0, revenue: 0 };
+      byDate[dateStr].revenue += parseFloat(p.amount);
+    });
+  }
+
+  // Ordenar datas
+  const sortedDates = Object.keys(byDate).sort();
+  const spendData = sortedDates.map(d => byDate[d].spend);
+  const revenueData = sortedDates.map(d => byDate[d].revenue);
+
+  // Render Charts
+  const ctxSpend = document.getElementById('adsSpendChart');
+  if (ctxSpend) {
+    if (adsSpendChartInstance) adsSpendChartInstance.destroy();
+    adsSpendChartInstance = new Chart(ctxSpend.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: sortedDates.map(d => new Date(d).toLocaleDateString('pt-BR')),
+        datasets: [
+          { label: 'Gasto', data: spendData, backgroundColor: 'rgba(239, 68, 68, 0.5)', borderColor: 'var(--danger)', borderWidth: 1 },
+          { label: 'Receita', data: revenueData, backgroundColor: 'rgba(34, 197, 94, 0.5)', borderColor: 'var(--success)', borderWidth: 1 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  const platforms = Object.keys(byPlatform);
+  const platformSpends = platforms.map(p => byPlatform[p].spend);
+  const ctxPlat = document.getElementById('adsPlatformChart');
+  if (ctxPlat) {
+    if (adsPlatformChartInstance) adsPlatformChartInstance.destroy();
+    adsPlatformChartInstance = new Chart(ctxPlat.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: platforms.map(p => p.toUpperCase()),
+        datasets: [{
+          data: platformSpends,
+          backgroundColor: platforms.map(p => p === 'meta' ? '#1877F2' : (p === 'google' ? '#EA4335' : '#888'))
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  // Tabelas
+  const tbodyPlat = document.getElementById('ads-platform-tbody');
+  tbodyPlat.innerHTML = '';
+  if (platforms.length === 0) {
+    tbodyPlat.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum custo importado ainda.</td></tr>';
+  } else {
+    platforms.forEach(p => {
+      const platSpend = byPlatform[p].spend;
+      const platClicks = byPlatform[p].clicks;
+      const platCpc = platClicks > 0 ? (platSpend / platClicks) : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-transform: capitalize; font-weight: 600;">${p}</td>
+        <td>R$ ${platSpend.toFixed(2)}</td>
+        <td style="color: var(--text-muted);">N/A (Requer UTM)</td>
+        <td style="color: var(--text-muted);">N/A</td>
+        <td>${platClicks.toLocaleString('pt-BR')}</td>
+        <td>R$ ${platCpc.toFixed(2)}</td>
+      `;
+      tbodyPlat.appendChild(tr);
+    });
+  }
+
+  const tbodyCamp = document.getElementById('ads-campaigns-tbody');
+  tbodyCamp.innerHTML = '';
+  if (metrics.length === 0) {
+    tbodyCamp.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Nenhum custo importado ainda.</td></tr>';
+  } else {
+    metrics.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50).forEach(m => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${new Date(m.date).toLocaleDateString('pt-BR')}</td>
+        <td style="text-transform: capitalize;">${m.platform}</td>
+        <td style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${m.campaign_id}</td>
+        <td>${m.campaign_name || 'Global'}</td>
+        <td style="color: var(--danger);">R$ ${parseFloat(m.spend).toFixed(2)}</td>
+        <td>${m.clicks || 0}</td>
+        <td>${m.impressions || 0}</td>
+      `;
+      tbodyCamp.appendChild(tr);
+    });
+  }
+}
+
+// ==========================================
+// 12. CENTRO DE NOTIFICAÇÕES (Sino)
 // ==========================================
 async function loadNotifications() {
   if (!supabaseClient) return;
