@@ -111,3 +111,35 @@ Uma atualização focada no ganho de valor imediato, transmitindo ao usuário to
 - Integração de `IntersectionObserver` para rastrear: `Hero_View`, `TrustBar_View` e `ValueProof_View`.
 - Listeners de clique nativos para: `Hero_CTA_Click` e `Hero_Secondary_Click`.
 - Tudo sincronizado via GA4 e Meta CAPI.
+
+---
+
+## Fase 3: Nova Oferta Estratégica (Reprecificação)
+A comunicação financeira da Landing Page foi inteiramente reestruturada para gerar maior urgência e senso de economia.
+- **Preço**: De R$600 para **R$497** (ou 12x de R$47,11).
+- **Ancoragem de Valor**: Adicionada a seção dissecando os preços individuais de cada sistema (ex: Sistema Imobiliário por R$997, VIP Delivery R$997) vs O "pacote tudo incluso" da NexusSaaS.
+- **Eventos Atualizados**: Todos os disparos de Meta/GA4 (Offer_Click, InitiateCheckout) agora refletem o valor hardcoded de `value: 497`. 
+
+---
+
+## Fase 4 e 5: Admin Dashboard Premium & Integração Supabase
+A interface de controle executivo (`admin-dashboard.html`) deixou de ser um simples visualizador de gráficos e se tornou um CRM / Painel de Analytics Single Page Application (SPA).
+- **Supabase Auth Guard**: Rota `admin-login.html` exige login para acessar o painel, aceitando estritamente o email `suporteglauberr@gmail.com`. A própria requisição SPA carrega esse token JWT.
+- **Deduplicação de Métricas Inteligente**: Ao invés de somar PageViews sujos, a leitura de Visitantes conta o número de *identificadores de sessão (session_id) distintos*, refletindo pessoas únicas. O mesmo ocorre no funil de eventos (View -> Lead -> InitiateCheckout).
+- **Filtro Temporal Global**: Dropdown integrado (Hoje, 7D, 30D, Tudo) que aplica a query de banco de dados nativamente em todas as funções.
+- **Módulo Leads e Drawer Lateral**: Ao clicar em um Lead quente, o painel expande um *Off-canvas Drawer* contendo o CRM dele, incluindo a jornada completa extraída de `lead_journey`.
+
+---
+
+## Fase 6: Central de Webhooks (Monitoramento de Checkout)
+A plataforma ganhou conectividade visual direta com os meios de pagamento (Hotmart/Kiwify).
+- **Nova Tabela e Edge Function**: Adicionada a tabela `webhook_logs` e a função serverless `purchase-webhook` que mascara dados sensíveis (LGPD) e valida a chave secreta `x-webhook-secret` (Prevenção de Ataques).
+- **Módulo UI**: Nova aba dedicada no Dashboard (`🔌 Webhooks`) que usa o Supabase Realtime para escutar os disparos do backend. É possível enviar um "Webhook Fake de Teste" pelo frontend que é processado e retorna o Status HTTP instantaneamente.
+
+---
+
+## Fase 7: Segurança Enterprise e RLS (Banco de Dados Blindado)
+Prevenção pesada contra extração de dados públicos (scrapping). O Supabase teve sua camada de proteção ativada (Row Level Security).
+- O tráfego anônimo da Landing Page que usa o `SUPABASE_ANON_KEY` só tem permissões ativas para executar `INSERT` nas tabelas. Ler ou apagar dados retorna `Erro 401`.
+- A função auxiliar PostgreSQL `is_admin()` verifica matematicamente as *claims* do JWT da requisição em busca do email aprovado. Se for legítimo, as restrições caem, garantindo segurança hermética do painel.
+- Tudo sincronizado via GA4 e Meta CAPI.
