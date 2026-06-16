@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCheckout(window.NexusTracker.config);
   } else {
     const script = document.createElement('script');
-    script.src = 'nexus-tracker.js';
+    script.src = 'tracking.js';
     script.onload = () => initCheckout(window.NexusTracker.config);
     document.head.appendChild(script);
   }
