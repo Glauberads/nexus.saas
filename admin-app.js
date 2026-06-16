@@ -1600,9 +1600,18 @@ let currentEditingProductId = null;
 async function loadProductsModule() {
   if (!supabaseClient) return;
 
-  const { data: products } = await supabaseClient.from('products').select('*').order('created_at', { ascending: true });
-  const { data: versions } = await supabaseClient.from('product_versions').select('*');
-  const { data: downloads } = await supabaseClient.from('member_downloads').select('id');
+  const { data: products, error: pErr } = await supabaseClient.from('products').select('*').order('created_at', { ascending: true });
+  if (pErr) {
+    alert("Erro ao carregar produtos do banco de dados: " + pErr.message);
+    console.error("Products error:", pErr);
+    return;
+  }
+  
+  const { data: versions, error: vErr } = await supabaseClient.from('product_versions').select('*');
+  if (vErr) console.warn("Aviso: Tabela product_versions ausente. " + vErr.message);
+  
+  const { data: downloads, error: dErr } = await supabaseClient.from('member_downloads').select('id');
+  if (dErr) console.warn("Aviso: Tabela member_downloads ausente. " + dErr.message);
 
   const active = products ? products.filter(p => p.status === 'active') : [];
   const bonus = products ? products.filter(p => p.is_bonus && p.status === 'active') : [];
@@ -1816,9 +1825,17 @@ window.saveProduct = async function() {
   }
 
   if (currentEditingProductId) {
-    await supabaseClient.from('products').update(payload).eq('id', currentEditingProductId);
+    const { error } = await supabaseClient.from('products').update(payload).eq('id', currentEditingProductId);
+    if (error) {
+      alert("Erro ao atualizar produto: " + error.message);
+      return;
+    }
   } else {
-    await supabaseClient.from('products').insert([payload]);
+    const { error } = await supabaseClient.from('products').insert([payload]);
+    if (error) {
+      alert("Erro ao criar produto no banco de dados: " + error.message);
+      return;
+    }
   }
   
   document.getElementById('modal-product').style.display = 'none';
