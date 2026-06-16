@@ -1753,17 +1753,17 @@ window.editProduct = async function(id) {
   
   const { data: p } = await supabaseClient.from('products').select('*').eq('id', id).single();
   if (p) {
-    document.getElementById('prod-name').value = p.name || '';
-    document.getElementById('prod-slug').value = p.slug || '';
-    document.getElementById('prod-desc').value = p.description || '';
-    document.getElementById('prod-cat').value = p.category || '';
-    document.getElementById('prod-type').value = p.access_type || 'core';
-    document.getElementById('prod-status').value = p.status || 'active';
-    document.getElementById('prod-license').value = p.requires_license ? 'true' : 'false';
-    document.getElementById('prod-featured').value = p.is_featured ? 'true' : 'false';
-    document.getElementById('prod-thumb').value = p.thumbnail_url || '';
-    document.getElementById('prod-video').value = p.video_url || '';
-    document.getElementById('prod-doc').value = p.documentation_url || '';
+    if(document.getElementById('prod-name')) document.getElementById('prod-name').value = p.name || '';
+    if(document.getElementById('prod-slug')) document.getElementById('prod-slug').value = p.slug || '';
+    if(document.getElementById('prod-desc')) document.getElementById('prod-desc').value = p.description || '';
+    if(document.getElementById('prod-cat')) document.getElementById('prod-cat').value = p.category || '';
+    if(document.getElementById('prod-type')) document.getElementById('prod-type').value = p.access_type || 'core';
+    if(document.getElementById('prod-status')) document.getElementById('prod-status').value = p.status || 'active';
+    if(document.getElementById('prod-license')) document.getElementById('prod-license').value = p.requires_license ? 'true' : 'false';
+    if(document.getElementById('prod-featured')) document.getElementById('prod-featured').value = p.is_featured ? 'true' : 'false';
+    if(document.getElementById('prod-thumb')) document.getElementById('prod-thumb').value = p.thumbnail_url || '';
+    if(document.getElementById('prod-video')) document.getElementById('prod-video').value = p.video_url || '';
+    if(document.getElementById('prod-doc')) document.getElementById('prod-doc').value = p.documentation_url || '';
     
     // Novos campos
     if(document.getElementById('prod-price')) document.getElementById('prod-price').value = p.price || '';
@@ -1779,28 +1779,30 @@ window.editProduct = async function(id) {
 }
 
 window.saveProduct = async function() {
+  const getVal = (id, def = '') => { const el = document.getElementById(id); return el ? el.value : def; };
+
   const payload = {
-    name: document.getElementById('prod-name').value,
-    slug: document.getElementById('prod-slug').value,
-    description: document.getElementById('prod-desc').value,
-    category: document.getElementById('prod-cat').value,
-    access_type: document.getElementById('prod-type').value,
-    status: document.getElementById('prod-status').value,
-    requires_license: document.getElementById('prod-license').value === 'true',
-    is_featured: document.getElementById('prod-featured').value === 'true',
-    is_bonus: document.getElementById('prod-type').value === 'bonus',
-    thumbnail_url: document.getElementById('prod-thumb').value,
-    video_url: document.getElementById('prod-video').value,
-    documentation_url: document.getElementById('prod-doc').value,
+    name: getVal('prod-name'),
+    slug: getVal('prod-slug'),
+    description: getVal('prod-desc'),
+    category: getVal('prod-cat'),
+    access_type: getVal('prod-type', 'core'),
+    status: getVal('prod-status', 'active'),
+    requires_license: getVal('prod-license', 'false') === 'true',
+    is_featured: getVal('prod-featured', 'false') === 'true',
+    is_bonus: getVal('prod-type') === 'bonus',
+    thumbnail_url: getVal('prod-thumb'),
+    video_url: getVal('prod-video'),
+    documentation_url: getVal('prod-doc'),
   };
 
-  if(document.getElementById('prod-price')) payload.price = parseFloat(document.getElementById('prod-price').value || 0);
-  if(document.getElementById('prod-sale-price')) payload.sale_price = parseFloat(document.getElementById('prod-sale-price').value || 0);
-  if(document.getElementById('prod-thank-you')) payload.thank_you_url = document.getElementById('prod-thank-you').value;
-  if(document.getElementById('prod-sales-page')) payload.sales_page_url = document.getElementById('prod-sales-page').value;
-  if(document.getElementById('prod-checkout-enabled')) payload.checkout_enabled = document.getElementById('prod-checkout-enabled').value === 'true';
-  if(document.getElementById('prod-pix-discount')) payload.pix_discount = parseFloat(document.getElementById('prod-pix-discount').value || 0);
-  if(document.getElementById('prod-max-installments')) payload.max_installments = parseInt(document.getElementById('prod-max-installments').value || 12);
+  if(document.getElementById('prod-price')) payload.price = parseFloat(getVal('prod-price', '0') || 0);
+  if(document.getElementById('prod-sale-price')) payload.sale_price = parseFloat(getVal('prod-sale-price', '0') || 0);
+  if(document.getElementById('prod-thank-you')) payload.thank_you_url = getVal('prod-thank-you');
+  if(document.getElementById('prod-sales-page')) payload.sales_page_url = getVal('prod-sales-page');
+  if(document.getElementById('prod-checkout-enabled')) payload.checkout_enabled = getVal('prod-checkout-enabled', 'false') === 'true';
+  if(document.getElementById('prod-pix-discount')) payload.pix_discount = parseFloat(getVal('prod-pix-discount', '0') || 0);
+  if(document.getElementById('prod-max-installments')) payload.max_installments = parseInt(getVal('prod-max-installments', '12') || 12);
 
   if (!payload.name || !payload.slug) {
     alert("Nome e Slug são obrigatórios.");
