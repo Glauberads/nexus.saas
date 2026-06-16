@@ -156,6 +156,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-events') await loadEventsModule();
   else if (moduleId === 'module-webhooks') await loadWebhooksModule();
   else if (moduleId === 'module-general-logs') await loadGeneralLogsModule();
+  else if (moduleId === 'module-automations') await loadAutomationsModule();
 }
 
 // --- DASHBOARD ---
@@ -621,6 +622,37 @@ function setupRealtime() {
       if (currentModule === 'module-general-logs') loadGeneralLogsModule();
     })
     .subscribe();
+
+  supabaseClient.channel('public:automation_logs')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'automation_logs' }, payload => {
+      if (currentModule === 'module-automations') {
+        const tbody = document.getElementById('automations-tbody');
+        if (tbody) {
+          if (tbody.innerHTML.includes('Nenhuma automação') || tbody.innerHTML.includes('Carregando')) {
+             tbody.innerHTML = '';
+          }
+          prependAutomationLog(payload.new, tbody, true);
+          
+          // Increment KPIs
+          const kpiToday = document.getElementById('kpi-automations-today');
+          if (kpiToday) kpiToday.textContent = parseInt(kpiToday.textContent || '0') + 1;
+          
+          if (payload.new.status === 'failed') {
+            const kpiFail = document.getElementById('kpi-automations-failures');
+            if (kpiFail) kpiFail.textContent = parseInt(kpiFail.textContent || '0') + 1;
+          }
+          
+          if (payload.new.automation_name === 'checkout_recovery' && payload.new.status === 'success') {
+            const kpiLeads = document.getElementById('kpi-automations-leads');
+            const kpiSales = document.getElementById('kpi-automations-sales');
+            const newLeads = parseInt(kpiLeads.textContent || '0') + 1;
+            if (kpiLeads) kpiLeads.textContent = newLeads;
+            if (kpiSales) kpiSales.textContent = `R$ ${(newLeads * 497).toLocaleString('pt-BR')}`;
+          }
+        }
+      }
+    })
+    .subscribe();
 }
 
 // ==========================================
@@ -839,3 +871,143 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ==========================================
+// 9. AUTOMATIONS (n8n + WhatsApp)
+// ==========================================
+async function loadAutomationsModule() {
+  if (!supabaseClient) return;
+
+  // Carrega configurações salvas de webhooks do n8n
+  document.getElementById('input-n8n-hotlead').value = localStorage.getItem('n8n_webhook_hot_lead') || '';
+  document.getElementById('input-n8n-recovery').value = localStorage.getItem('n8n_webhook_recovery') || '';
+  document.getElementById('input-n8n-purchase').value = localStorage.getItem('n8n_webhook_purchase') || '';
+
+  // Busca histórico de execuções
+  let query = supabaseClient.from('automation_logs').select('*').order('created_at', { ascending: false }).limit(50);
+  query = applyDateFilter(query);
+  const { data: logs, error } = await query;
+  
+  if (error) {
+    console.error("Erro ao carregar automações:", error);
+    return;
+  }
+
+  // Preenche KPIs
+  const todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  const logsToday = logs.filter(l => new Date(l.created_at) >= todayStart);
+  
+  const leadsRec = logs.filter(l => l.automation_name === 'checkout_recovery' && l.status === 'success').length;
+  const vendasRec = leadsRec * 497; // Valor figurativo baseado no produto principal
+
+  document.getElementById('kpi-automations-today').textContent = logsToday.length;
+  document.getElementById('kpi-automations-leads').textContent = leadsRec;
+  document.getElementById('kpi-automations-sales').textContent = `R$ ${vendasRec.toLocaleString('pt-BR')}`;
+  document.getElementById('kpi-automations-failures').textContent = logs.filter(l => l.status === 'failed').length;
+
+  // Preenche Tabela
+  const tbody = document.getElementById('automations-tbody');
+  if (!tbody) return;
+
+  if (!logs || logs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma automação disparada ainda.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  logs.forEach(log => prependAutomationLog(log, tbody, false));
+}
+
+function prependAutomationLog(log, tbody, animate = true) {
+  const timeStr = new Date(log.created_at).toLocaleString('pt-BR');
+  
+  let statusBadge = '';
+  if (log.status === 'success') statusBadge = `<span class="badge success">Enviado</span>`;
+  else if (log.status === 'failed') statusBadge = `<span class="badge" style="background: var(--danger-bg); color: var(--danger);">Falha</span>`;
+  else statusBadge = `<span class="badge">${log.status}</span>`;
+
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${timeStr}</td>
+    <td><strong>${log.automation_name}</strong></td>
+    <td><span style="font-size: 12px; color: var(--text-muted);">${log.trigger_type}</span></td>
+    <td><span style="font-size: 11px; font-family: monospace; color: var(--text-muted);">${log.destination ? log.destination.substring(0,30)+'...' : '-'}</span></td>
+    <td>${statusBadge}</td>
+  `;
+  tbody.prepend(tr);
+
+  if (animate) {
+    tr.animate([
+      { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
+      { backgroundColor: 'transparent' }
+    ], { duration: 2000 });
+  }
+}
+
+window.saveN8nWebhooks = function() {
+  const hotLead = document.getElementById('input-n8n-hotlead').value.trim();
+  const recovery = document.getElementById('input-n8n-recovery').value.trim();
+  const purchase = document.getElementById('input-n8n-purchase').value.trim();
+
+  localStorage.setItem('n8n_webhook_hot_lead', hotLead);
+  localStorage.setItem('n8n_webhook_recovery', recovery);
+  localStorage.setItem('n8n_webhook_purchase', purchase);
+
+  showToast("URLs de Webhook salvas com sucesso!");
+};
+
+window.testAutomation = async function() {
+  const type = document.getElementById('test-automation-type').value;
+  
+  let webhookUrl = '';
+  if (type === 'hot_lead') webhookUrl = localStorage.getItem('n8n_webhook_hot_lead');
+  if (type === 'checkout_recovery') webhookUrl = localStorage.getItem('n8n_webhook_recovery');
+  if (type === 'purchase_onboarding') webhookUrl = localStorage.getItem('n8n_webhook_purchase');
+
+  if (!webhookUrl) {
+    showToast("Por favor, configure e salve a URL do Webhook primeiro.", true);
+    return;
+  }
+
+  showToast("Enviando teste de automação...");
+
+  const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.NexusTracker.config;
+
+  const payload = {
+    automation_type: type,
+    n8n_webhook_url: webhookUrl,
+    payload: {
+      type: type,
+      name: "Lead Teste",
+      whatsapp: "22999999999",
+      score: 91,
+      tier: "muito_quente",
+      utm_source: "teste_manual",
+      utm_campaign: "teste_interno",
+      is_test: true
+    }
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/automation-dispatcher`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      if (data.skipped) showToast("Automação pulada (Prevenção de Duplicidade)");
+      else showToast("Automação disparada com sucesso para o n8n!");
+    } else {
+      showToast("Falha ao disparar automação: " + (data.error || res.statusText), true);
+    }
+  } catch (err) {
+    console.error("Erro disparando edge function:", err);
+    showToast("Erro de rede ao contatar Edge Function.", true);
+  }
+};

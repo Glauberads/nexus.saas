@@ -30,8 +30,9 @@
       <li><a href="#" data-target="module-ads">🎯 Meta / Google Ads</a></li>
       <li><a href="#" data-target="module-webhooks">🔌 Webhooks</a></li>
       <li><a href="#" data-target="module-events">⚡ Eventos Realtime</a></li>
-      <li><a href="#" data-target="module-config">⚙️ Configurações</a></li>
       <li><a href="#" data-target="module-general-logs" style="color: var(--accent); font-weight: 600;">📜 Logs Gerais</a></li>
+      <li><a href="#" data-target="module-automations" style="color: var(--success); font-weight: 600;">🤖 Automações</a></li>
+      <li><a href="#" data-target="module-config">⚙️ Configurações</a></li>
     </ul>
 
     <div class="sidebar-footer">
@@ -310,6 +311,96 @@
           <div style="padding: 16px; text-align: center; border-top: 1px solid #1f1f22;">
             <button class="btn-login" id="btn-load-more-logs" style="width: auto; padding: 8px 16px; font-size: 13px; background: transparent; border: 1px solid var(--accent); color: var(--accent);">Carregar Mais Logs</button>
           </div>
+        </div>
+      </section>
+
+      <!-- MODULE 3: AUTOMATIONS -->
+      <section id="module-automations" class="module-section">
+        <h2>Motor de Automações (n8n + WhatsApp)</h2>
+        
+        <div class="kpi-grid" style="margin-top: 24px;">
+          <div class="kpi-card">
+            <div class="kpi-title">Execuções Hoje</div>
+            <div class="kpi-value" id="kpi-automations-today">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Leads Recuperados</div>
+            <div class="kpi-value" id="kpi-automations-leads">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-title">Vendas Recuperadas</div>
+            <div class="kpi-value" id="kpi-automations-sales">R$ 0,00</div>
+          </div>
+          <div class="kpi-card" style="border-left: 3px solid var(--danger);">
+            <div class="kpi-title">Falhas de Envio</div>
+            <div class="kpi-value" id="kpi-automations-failures" style="color: var(--danger);">0</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px;">
+          <!-- N8N SETTINGS -->
+          <div class="table-card" style="background: rgba(16,185,129,0.05); border: 1px solid rgba(16,185,129,0.2);">
+            <div class="table-header">
+              <h3>Webhooks do n8n (Destinos)</h3>
+              <button class="btn-login" style="width: auto; padding: 6px 12px; font-size: 13px;" onclick="saveN8nWebhooks()">💾 Salvar URLs</button>
+            </div>
+            <div style="padding: 16px;">
+              <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Cole aqui as URLs dos webhooks gerados no seu n8n para cada fluxo.</p>
+              
+              <div class="form-group">
+                <label>🔥 Hot Lead Webhook URL</label>
+                <input type="text" id="input-n8n-hotlead" placeholder="https://n8n.seusite.com/webhook/..." style="width: 100%; padding: 8px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 4px; margin-bottom: 12px;">
+              </div>
+              
+              <div class="form-group">
+                <label>💰 Checkout Recovery Webhook URL</label>
+                <input type="text" id="input-n8n-recovery" placeholder="https://n8n.seusite.com/webhook/..." style="width: 100%; padding: 8px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 4px; margin-bottom: 12px;">
+              </div>
+
+              <div class="form-group">
+                <label>🚀 Purchase Onboarding Webhook URL</label>
+                <input type="text" id="input-n8n-purchase" placeholder="https://n8n.seusite.com/webhook/..." style="width: 100%; padding: 8px; background: #000; border: 1px solid var(--border); color: #fff; border-radius: 4px;">
+              </div>
+            </div>
+          </div>
+
+          <!-- TEST AUTOMATION -->
+          <div class="table-card">
+            <div class="table-header">
+              <h3>Painel de Teste Rápido</h3>
+            </div>
+            <div style="padding: 16px;">
+              <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Dispare um evento falso para testar se a mensagem chega no seu WhatsApp pelo n8n.</p>
+              
+              <select id="test-automation-type" style="width: 100%; padding: 8px; background: var(--bg-main); border: 1px solid var(--border); color: #fff; border-radius: 4px; margin-bottom: 16px;">
+                <option value="hot_lead">Testar: 🔥 Lead Fervendo</option>
+                <option value="checkout_recovery">Testar: 💰 Recuperação de Pix/Checkout</option>
+                <option value="purchase_onboarding">Testar: 🚀 Venda Aprovada (Onboarding)</option>
+              </select>
+              
+              <button class="btn-login" style="width: 100%;" onclick="testAutomation()">⚡ Disparar Automação de Teste</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-card" style="margin-top: 24px;">
+          <div class="table-header">
+            <h3>Histórico de Execuções</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Fluxo</th>
+                <th>Gatilho</th>
+                <th>Destino</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="automations-tbody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Carregando logs de automação...</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
