@@ -597,7 +597,6 @@ function setupRealtime() {
           prependWebhookLogToFeed(payload.new, tbody, true);
         }
       }
-      }
     })
     .subscribe();
 }
