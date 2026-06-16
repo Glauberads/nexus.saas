@@ -155,6 +155,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-funnel') await loadFunnelModule();
   else if (moduleId === 'module-events') await loadEventsModule();
   else if (moduleId === 'module-webhooks') await loadWebhooksModule();
+  else if (moduleId === 'module-general-logs') await loadGeneralLogsModule();
 }
 
 // --- DASHBOARD ---
@@ -583,6 +584,10 @@ function setupRealtime() {
       if (['Purchase', 'Lead', 'QualifiedLead', 'CheckoutAbandoned'].includes(eventName) && currentModule === 'module-dashboard') {
         loadDashboard();
       }
+      
+      if (currentModule === 'module-general-logs') {
+        loadGeneralLogsModule();
+      }
     })
     .subscribe();
     
@@ -597,6 +602,23 @@ function setupRealtime() {
           prependWebhookLogToFeed(payload.new, tbody, true);
         }
       }
+      
+      if (currentModule === 'module-general-logs') {
+        loadGeneralLogsModule();
+      }
+    })
+    .subscribe();
+
+  // Escuta tabelas exclusivas do General Logs
+  supabaseClient.channel('public:general_logs_extras')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'purchases' }, () => {
+      if (currentModule === 'module-general-logs') loadGeneralLogsModule();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'leads' }, () => {
+      if (currentModule === 'module-general-logs') loadGeneralLogsModule();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'lead_journey' }, () => {
+      if (currentModule === 'module-general-logs') loadGeneralLogsModule();
     })
     .subscribe();
 }
@@ -666,3 +688,154 @@ window.exportLeadsToCSV = async function() {
     showToast("Erro ao gerar CSV.", true);
   }
 };
+
+// ==========================================
+// 8. GENERAL LOGS (BATCAVE)
+// ==========================================
+let generalLogsOffset = 0;
+const GENERAL_LOGS_LIMIT = 100;
+let generalLogsActiveFilter = 'all';
+
+async function loadGeneralLogsModule(isLoadMore = false) {
+  if (!supabaseClient) return;
+
+  if (!isLoadMore) {
+    generalLogsOffset = 0;
+    const tbody = document.getElementById('general-logs-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Carregando logs do sistema...</td></tr>';
+  }
+
+  try {
+    // Busca em paralelo
+    const [resEvents, resWebhooks, resJourney, resPurchases, resLeads] = await Promise.all([
+      supabaseClient.from('events').select('*').order('created_at', { ascending: false }).limit(GENERAL_LOGS_LIMIT),
+      supabaseClient.from('webhook_logs').select('*').order('created_at', { ascending: false }).limit(GENERAL_LOGS_LIMIT),
+      supabaseClient.from('lead_journey').select('*').order('created_at', { ascending: false }).limit(GENERAL_LOGS_LIMIT),
+      supabaseClient.from('purchases').select('*').order('created_at', { ascending: false }).limit(GENERAL_LOGS_LIMIT),
+      supabaseClient.from('leads').select('*').order('created_at', { ascending: false }).limit(GENERAL_LOGS_LIMIT)
+    ]);
+
+    let unifiedLogs = [];
+
+    // Normalização: events
+    (resEvents.data || []).forEach(e => {
+      unifiedLogs.push({
+        id: e.id, time: e.created_at, origin: 'Frontend', originClass: 'src-frontend', type: 'Event: ' + e.event_name, category: 'frontend',
+        desc: `Sessão: ${e.session_id ? e.session_id.substring(0,8) : 'N/A'} | Page: ${e.url || '-'}`,
+        status: '200 OK', json: e.params || {}
+      });
+    });
+
+    // Normalização: webhook_logs
+    (resWebhooks.data || []).forEach(w => {
+      const isErr = w.response_status !== 200;
+      unifiedLogs.push({
+        id: w.id, time: w.created_at, origin: w.platform || 'Webhook', originClass: 'src-webhook', type: w.event_type, category: isErr ? 'error' : 'webhook',
+        desc: `Valor: R$${w.amount || 0} | Comprador: ${w.buyer_name || w.buyer_email || 'N/A'}`,
+        status: isErr ? `ERR ${w.response_status}` : '200 OK', json: w.raw_payload || {}
+      });
+    });
+
+    // Normalização: lead_journey
+    (resJourney.data || []).forEach(j => {
+      unifiedLogs.push({
+        id: j.id, time: j.created_at, origin: 'Database', originClass: 'src-db', type: 'Journey: ' + j.action_type, category: 'lead',
+        desc: `Lead: ${j.email || 'N/A'}`,
+        status: 'Registrado', json: j.action_details || {}
+      });
+    });
+
+    // Normalização: purchases
+    (resPurchases.data || []).forEach(p => {
+      unifiedLogs.push({
+        id: p.id, time: p.created_at, origin: 'Backend', originClass: 'src-db', type: 'Purchase Insert', category: 'purchase',
+        desc: `Order: ${p.order_id || 'N/A'} | Email: ${p.email || 'N/A'}`,
+        status: p.status || 'OK', json: p
+      });
+    });
+
+    // Normalização: leads
+    (resLeads.data || []).forEach(l => {
+      unifiedLogs.push({
+        id: l.id, time: l.created_at, origin: 'CRM', originClass: 'src-db', type: 'New Lead', category: 'lead',
+        desc: `Nome: ${l.name || '-'} | Email: ${l.email || '-'} | Tier: ${l.lead_tier || 'frio'}`,
+        status: 'Criado', json: l
+      });
+    });
+
+    // Ordenação global
+    unifiedLogs.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    renderGeneralLogs(unifiedLogs, isLoadMore);
+
+  } catch (err) {
+    console.error("Erro ao carregar logs gerais:", err);
+  }
+}
+
+function renderGeneralLogs(logs, append = false) {
+  const tbody = document.getElementById('general-logs-tbody');
+  if (!tbody) return;
+
+  if (!append) tbody.innerHTML = '';
+
+  let filteredLogs = logs;
+  if (generalLogsActiveFilter !== 'all') {
+    filteredLogs = logs.filter(l => l.category === generalLogsActiveFilter || (generalLogsActiveFilter === 'error' && String(l.status).includes('ERR')));
+  }
+
+  if (filteredLogs.length === 0 && !append) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhum log encontrado.</td></tr>';
+    return;
+  }
+
+  filteredLogs.forEach(log => {
+    const timeStr = new Date(log.time).toLocaleString('pt-BR');
+    const tr = document.createElement('tr');
+    tr.className = 'log-row';
+    
+    let statusHtml = `<span style="color: var(--text-muted); font-size: 12px;">${log.status}</span>`;
+    if (String(log.status).includes('ERR')) statusHtml = `<span style="color: var(--danger); font-size: 12px; font-weight: 600;">${log.status}</span>`;
+    else if (String(log.status).includes('200')) statusHtml = `<span style="color: var(--success); font-size: 12px; font-weight: 600;">${log.status}</span>`;
+
+    const jsonId = 'json-' + Math.random().toString(36).substr(2, 9);
+
+    tr.innerHTML = `
+      <td class="log-time">${timeStr}</td>
+      <td><span class="log-src ${log.originClass}">${log.origin}</span></td>
+      <td class="log-type">${log.type}</td>
+      <td>
+        <div class="log-desc">${log.desc}</div>
+        <button class="btn-json" onclick="document.getElementById('${jsonId}').classList.toggle('visible')">Ver Payload JSON</button>
+        <div id="${jsonId}" class="log-json">${JSON.stringify(log.json, null, 2)}</div>
+      </td>
+      <td>${statusHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Configurar Filtros
+  const filters = document.querySelectorAll('#module-general-logs .btn-filter');
+  filters.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      filters.forEach(f => f.classList.remove('active'));
+      e.target.classList.add('active');
+      generalLogsActiveFilter = e.target.getAttribute('data-filter');
+      // Recarrega do zero ao mudar filtro
+      loadGeneralLogsModule();
+    });
+  });
+
+  // Configurar Botão Load More
+  const btnLoadMore = document.getElementById('btn-load-more-logs');
+  if (btnLoadMore) {
+    btnLoadMore.addEventListener('click', () => {
+      generalLogsOffset += GENERAL_LOGS_LIMIT;
+      // Nota: numa implementação real, generalLogsOffset entraria no .range(offset, offset + limit)
+      // Como o design aprovado pediu "apenas os ultimos 100", o load more está como placeholder visual
+      showToast("Carregar histórico profundo requer paginação avançada.");
+    });
+  }
+});
