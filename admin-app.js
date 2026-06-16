@@ -157,6 +157,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-webhooks') await loadWebhooksModule();
   else if (moduleId === 'module-general-logs') await loadGeneralLogsModule();
   else if (moduleId === 'module-automations') await loadAutomationsModule();
+  else if (moduleId === 'module-whatsapp-crm') await loadWhatsappCrmModule();
 }
 
 // --- DASHBOARD ---
@@ -393,7 +394,7 @@ function prependEventToFeed(evt, tbody) {
 // ==========================================
 // 4. DRAWER (LEAD DETAIL)
 // ==========================================
-async function openLeadDrawer(leadId) {
+async function openLeadDrawer(leadOrId) {
   const overlay = document.getElementById('drawer-overlay');
   overlay.classList.add('active');
   
@@ -401,25 +402,48 @@ async function openLeadDrawer(leadId) {
   document.getElementById('drawer-email').textContent = "";
   document.getElementById('drawer-timeline').innerHTML = "";
 
+  const leadId = typeof leadOrId === 'object' ? leadOrId.id : leadOrId;
+  
   const { data: lead } = await supabaseClient.from('leads').select('*').eq('id', leadId).single();
   if (!lead) return;
 
   document.getElementById('drawer-name').textContent = lead.name || 'Lead Anônimo';
   document.getElementById('drawer-email').textContent = `${lead.email || ''} | ${lead.whatsapp || ''}`;
   
-  const { data: journey } = await supabaseClient.from('lead_journey').select('*').eq('lead_id', leadId).order('created_at', { ascending: true });
+  // Buscar Múltiplas Fontes (Super Timeline)
+  const [{ data: events }, { data: journey }, { data: msgs }, { data: purchases }] = await Promise.all([
+    supabaseClient.from('events').select('*').eq('lead_id', leadId),
+    supabaseClient.from('lead_journey').select('*').eq('lead_id', leadId),
+    supabaseClient.from('crm_messages').select('*').eq('lead_id', leadId),
+    supabaseClient.from('purchases').select('*').eq('lead_id', leadId)
+  ]);
+
+  let timeline = [];
+  
+  if (events) events.forEach(e => timeline.push({ time: new Date(e.created_at), type: 'Event', title: e.event_name, detail: JSON.stringify(e.payload), icon: '⚡', color: 'var(--text-muted)' }));
+  if (journey) journey.forEach(j => timeline.push({ time: new Date(j.created_at), type: 'Journey', title: j.action_type, detail: JSON.stringify(j.action_details), icon: '📍', color: 'var(--accent)' }));
+  if (msgs) msgs.forEach(m => timeline.push({ time: new Date(m.created_at), type: 'WhatsApp', title: m.direction === 'inbound' ? 'Resposta Recebida' : 'Msg Enviada', detail: m.message || m.automation_name, icon: '💬', color: m.direction === 'inbound' ? 'var(--success)' : '#25D366' }));
+  if (purchases) purchases.forEach(p => timeline.push({ time: new Date(p.created_at), type: 'Purchase', title: 'Compra Aprovada', detail: `Valor: ${p.amount} (${p.payment_method})`, icon: '💰', color: '#10b981' }));
+
+  // Ordenar cronologicamente
+  timeline.sort((a, b) => a.time - b.time);
+
   const timelineContainer = document.getElementById('drawer-timeline');
   timelineContainer.innerHTML = '';
   
-  if (journey && journey.length > 0) {
-    journey.forEach(evt => {
-      const timeStr = new Date(evt.created_at).toLocaleString('pt-BR');
+  if (timeline.length > 0) {
+    timeline.forEach(item => {
+      const timeStr = item.time.toLocaleString('pt-BR');
       const div = document.createElement('div');
       div.className = 'timeline-item';
       div.innerHTML = `
-        <div class="timeline-time">${timeStr}</div>
-        <div class="timeline-event">${evt.event_name}</div>
-        <div class="timeline-desc">${evt.metadata ? JSON.stringify(evt.metadata) : ''}</div>
+        <div class="timeline-time" style="font-size: 10px; color: var(--text-muted); margin-bottom: 2px;">${timeStr}</div>
+        <div class="timeline-event" style="color: ${item.color}; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <span>${item.icon}</span> ${item.title}
+        </div>
+        <div class="timeline-desc" style="font-size: 11px; margin-top: 4px; padding: 6px; background: rgba(255,255,255,0.03); border-radius: 4px; word-break: break-all;">
+          ${item.detail}
+        </div>
       `;
       timelineContainer.appendChild(div);
     });
@@ -650,6 +674,27 @@ function setupRealtime() {
             if (kpiSales) kpiSales.textContent = `R$ ${(newLeads * 497).toLocaleString('pt-BR')}`;
           }
         }
+      }
+    })
+    .subscribe();
+
+  // CRM Messages Listener
+  supabaseClient.channel('public:crm_messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'crm_messages' }, () => {
+      if (currentModule === 'module-whatsapp-crm') loadWhatsappCrmModule();
+    })
+    .subscribe();
+
+  // Notifications Listener
+  supabaseClient.channel('public:notifications')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => {
+      loadNotifications();
+      // Animate Bell
+      const bell = document.querySelector('.notification-center span:first-child');
+      if (bell) {
+        bell.style.transition = '0.2s';
+        bell.style.transform = 'scale(1.3) rotate(15deg)';
+        setTimeout(() => { bell.style.transform = 'scale(1) rotate(0deg)'; }, 200);
       }
     })
     .subscribe();
@@ -999,15 +1044,265 @@ window.testAutomation = async function() {
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
-    if (res.ok && data.success) {
-      if (data.skipped) showToast("Automação pulada (Prevenção de Duplicidade)");
-      else showToast("Automação disparada com sucesso para o n8n!");
-    } else {
-      showToast("Falha ao disparar automação: " + (data.error || res.statusText), true);
     }
   } catch (err) {
     console.error("Erro disparando edge function:", err);
     showToast("Erro de rede ao contatar Edge Function.", true);
   }
 };
+
+// ==========================================
+// 10. WHATSAPP CRM (Kanban & Mensagens)
+// ==========================================
+let crmLeads = [];
+let crmFilter = 'tudo';
+
+async function loadWhatsappCrmModule() {
+  if (!supabaseClient) return;
+
+  // Carregar Leads para o Kanban (Últimos 30 dias ou max 200)
+  const date30d = new Date();
+  date30d.setDate(date30d.getDate() - 30);
+
+  let query = supabaseClient.from('leads')
+    .select('*, crm_messages(id, status)')
+    .gte('created_at', date30d.toISOString())
+    .order('last_activity_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  const { data: leads, error } = await query;
+  if (error) {
+    console.error("Erro ao carregar CRM:", error);
+    return;
+  }
+
+  crmLeads = leads || [];
+  
+  // Buscar Mensagens para KPIs
+  const { data: msgs } = await supabaseClient.from('crm_messages').select('direction, lead_id');
+  
+  const outbound = msgs ? msgs.filter(m => m.direction === 'outbound').length : 0;
+  const inbound = msgs ? msgs.filter(m => m.direction === 'inbound').length : 0;
+  const rate = outbound > 0 ? Math.round((inbound / outbound) * 100) : 0;
+  const sales = crmLeads.filter(l => l.lead_status === 'purchased').length;
+
+  document.getElementById('kpi-crm-sent').textContent = outbound;
+  document.getElementById('kpi-crm-replies').textContent = inbound;
+  document.getElementById('kpi-crm-rate').textContent = `${rate}%`;
+  document.getElementById('kpi-crm-sales').textContent = sales;
+
+  renderKanban();
+  setupKanbanDragAndDrop();
+}
+
+window.filterCrm = function(filter, btnElement) {
+  document.querySelectorAll('#module-whatsapp-crm .btn-filter').forEach(b => b.classList.remove('active'));
+  btnElement.classList.add('active');
+  crmFilter = filter;
+  renderKanban();
+};
+
+function renderKanban() {
+  const cols = document.querySelectorAll('.kanban-col');
+  cols.forEach(col => {
+    const container = col.querySelector('.kanban-cards');
+    container.innerHTML = ''; // Limpar coluna
+    const badge = col.querySelector('.badge');
+    badge.textContent = '0';
+  });
+
+  const filtered = crmFilter === 'quentes' 
+    ? crmLeads.filter(l => l.lead_tier === 'quente' || l.lead_tier === 'muito_quente')
+    : crmLeads;
+
+  filtered.forEach(lead => {
+    const status = lead.lead_status || 'new';
+    const col = document.querySelector(`.kanban-col[data-status="${status}"]`);
+    if (col) {
+      const container = col.querySelector('.kanban-cards');
+      const card = createKanbanCard(lead);
+      container.appendChild(card);
+      
+      const badge = col.querySelector('.badge');
+      badge.textContent = parseInt(badge.textContent) + 1;
+    }
+  });
+}
+
+function createKanbanCard(lead) {
+  const card = document.createElement('div');
+  card.className = 'kanban-card';
+  card.draggable = true;
+  card.dataset.id = lead.id;
+
+  const scoreBadge = lead.lead_score > 75 
+    ? `<span class="k-score-badge hot">🔥 ${lead.lead_score}</span>` 
+    : `<span class="k-score-badge">⭐ ${lead.lead_score || 0}</span>`;
+
+  card.innerHTML = `
+    <div class="k-card-title">
+      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${lead.name || 'Lead Anônimo'}</span>
+      ${scoreBadge}
+    </div>
+    <div class="k-card-sub">${lead.whatsapp || lead.email || 'Sem contato'}</div>
+    <div class="k-card-meta">
+      <span>${lead.utm_source || 'orgânico'}</span>
+      <span>${new Date(lead.last_activity_at || lead.created_at).toLocaleDateString('pt-BR')}</span>
+    </div>
+  `;
+
+  card.addEventListener('click', () => openLeadDrawer(lead));
+  return card;
+}
+
+// --- Drag and Drop Vanilla JS ---
+let draggedCard = null;
+
+function setupKanbanDragAndDrop() {
+  const board = document.getElementById('kanban-board');
+  
+  board.addEventListener('dragstart', e => {
+    if (e.target.classList.contains('kanban-card')) {
+      draggedCard = e.target;
+      setTimeout(() => e.target.classList.add('dragging'), 0);
+    }
+  });
+
+  board.addEventListener('dragend', e => {
+    if (e.target.classList.contains('kanban-card')) {
+      e.target.classList.remove('dragging');
+      draggedCard = null;
+      document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+    }
+  });
+
+  const cols = document.querySelectorAll('.kanban-col');
+  cols.forEach(col => {
+    col.addEventListener('dragover', e => {
+      e.preventDefault();
+      col.classList.add('drag-over');
+    });
+
+    col.addEventListener('dragleave', e => {
+      col.classList.remove('drag-over');
+    });
+
+    col.addEventListener('drop', async e => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      
+      if (draggedCard) {
+        const newStatus = col.dataset.status;
+        const leadId = draggedCard.dataset.id;
+        const container = col.querySelector('.kanban-cards');
+        container.appendChild(draggedCard); // Move visualmente
+
+        // Recalcular Badges visuais
+        renderKanbanBadges();
+
+        // Atualizar Banco de Dados
+        try {
+          const leadData = crmLeads.find(l => l.id === leadId);
+          const oldStatus = leadData.lead_status || 'new';
+          leadData.lead_status = newStatus;
+
+          if (oldStatus !== newStatus) {
+             await supabaseClient.from('leads').update({ lead_status: newStatus }).eq('id', leadId);
+             
+             // Registrar na Jornada
+             await supabaseClient.from('lead_journey').insert([{
+               lead_id: leadId,
+               action_type: 'crm_status_changed',
+               action_details: { from: oldStatus, to: newStatus }
+             }]);
+          }
+        } catch (err) {
+          console.error("Erro ao mover lead:", err);
+          showToast("Erro ao salvar mudança no banco.", true);
+        }
+      }
+    });
+  });
+}
+
+function renderKanbanBadges() {
+  document.querySelectorAll('.kanban-col').forEach(col => {
+    const count = col.querySelectorAll('.kanban-card').length;
+    col.querySelector('.badge').textContent = count;
+  });
+}
+
+// ==========================================
+// 11. CENTRO DE NOTIFICAÇÕES (Sino)
+// ==========================================
+async function loadNotifications() {
+  if (!supabaseClient) return;
+
+  const { data: notifs } = await supabaseClient.from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const badge = document.getElementById('notif-badge');
+  const list = document.getElementById('notif-list');
+  
+  if (!notifs || notifs.length === 0) {
+    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;">Nenhuma notificação nova.</div>';
+    badge.style.display = 'none';
+    return;
+  }
+
+  const unread = notifs.filter(n => !n.is_read).length;
+  if (unread > 0) {
+    badge.textContent = unread;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  list.innerHTML = '';
+  notifs.forEach(n => {
+    const div = document.createElement('div');
+    div.className = `notif-item ${!n.is_read ? 'unread' : ''}`;
+    
+    let icon = '🔔';
+    if (n.type === 'whatsapp_reply') icon = '💬';
+    if (n.type === 'hot_lead') icon = '🔥';
+    if (n.type === 'purchase') icon = '💰';
+
+    div.innerHTML = `
+      <div style="display: flex; gap: 8px;">
+        <span style="font-size: 16px;">${icon}</span>
+        <div>
+          <div style="font-weight: 600; color: #fff; margin-bottom: 2px;">${n.title}</div>
+          <div style="color: var(--text-secondary);">${n.message}</div>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">${new Date(n.created_at).toLocaleTimeString('pt-BR')}</div>
+        </div>
+      </div>
+    `;
+
+    div.onclick = async () => {
+      if (!n.is_read) {
+        await supabaseClient.from('notifications').update({ is_read: true }).eq('id', n.id);
+        div.classList.remove('unread');
+        const count = parseInt(badge.textContent) - 1;
+        if (count <= 0) badge.style.display = 'none';
+        else badge.textContent = count;
+      }
+      if (n.lead_id) {
+        const { data: leadData } = await supabaseClient.from('leads').select('*').eq('id', n.lead_id).single();
+        if (leadData) openLeadDrawer(leadData);
+      }
+      document.getElementById('notif-dropdown').classList.remove('active');
+    };
+
+    list.appendChild(div);
+  });
+}
+
+// Inicializa Notificações no start
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => { if (supabaseClient) loadNotifications(); }, 2000);
+});
+
