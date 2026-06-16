@@ -26,6 +26,7 @@
       <li><a href="#" data-target="module-leads">👥 Leads (CRM)</a></li>
       <li><a href="#" data-target="module-funnel">📈 Funil</a></li>
       <li><a href="#" data-target="module-vendas">💰 Vendas</a></li>
+      <li><a href="#" data-target="module-gateways" style="color: #10B981; font-weight: 600;">🏦 Gateways</a></li>
       <li><a href="#" data-target="module-products" style="color: #F59E0B; font-weight: 600;">📦 Produtos</a></li>
       <li><a href="#" data-target="module-campaigns">📢 Campanhas</a></li>
       <li><a href="#" data-target="module-ads">🎯 Meta / Google Ads</a></li>
@@ -626,7 +627,73 @@
           .kanban-col.drag-over { background: rgba(255,255,255,0.02); border-color: var(--accent); }
         </style>
       </section>
+      <!-- MODULE 12.2: GATEWAYS (ENTERPRISE) -->
+      <section id="module-gateways" class="module-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2>🏦 Gateways Disponíveis (Enterprise)</h2>
+            <p style="color: var(--text-secondary);">Gestão centralizada de cobranças, assinaturas e estornos.</p>
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn-primary" onclick="alert('Teste de Gateway em desenvolvimento')" style="background: transparent; color: white; padding: 8px 16px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">🧪 Testar Gateway</button>
+            <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981; color: #10B981; padding: 8px 16px; border-radius: 4px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+              <span style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
+              Asaas Online
+            </div>
+          </div>
+        </div>
 
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+          <div class="kpi-card" style="border-top: 3px solid #10B981;">
+            <h3 style="font-size: 11px;">MRR (Assinaturas)</h3>
+            <div class="kpi-value" id="kpi-gw-mrr" style="font-size: 24px; color: #10B981;">R$ 0,00</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Receita Hoje</h3>
+            <div class="kpi-value" id="kpi-gw-today" style="font-size: 24px;">R$ 0,00</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Receita 30 Dias</h3>
+            <div class="kpi-value" id="kpi-gw-30d" style="font-size: 24px;">R$ 0,00</div>
+          </div>
+          <div class="kpi-card" style="border-top: 3px solid #F59E0B;">
+            <h3 style="font-size: 11px;">Aprovação (Pix/Cartão)</h3>
+            <div class="kpi-value" id="kpi-gw-approval" style="font-size: 24px; color: #F59E0B;">0%</div>
+          </div>
+          <div class="kpi-card" style="border-top: 3px solid var(--danger);">
+            <h3 style="font-size: 11px;">Estornos / Chargebacks</h3>
+            <div class="kpi-value" id="kpi-gw-refunds" style="font-size: 24px; color: var(--danger);">0</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Transações e Eventos Recentes</h3>
+            <div class="table-filters">
+              <select id="filter-gw-type" style="width: 150px;">
+                <option value="all">Todas</option>
+                <option value="PAYMENT_CONFIRMED">Aprovadas</option>
+                <option value="PAYMENT_OVERDUE">Vencidas</option>
+                <option value="PAYMENT_REFUNDED">Estornadas</option>
+              </select>
+            </div>
+          </div>
+          <table style="font-size: 13px;">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Gateway</th>
+                <th>Evento / Status</th>
+                <th>Processado</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="gw-events-tbody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Carregando eventos...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
       <!-- MODULE 12.1: PRODUTOS (CMS) -->
       <section id="module-products" class="module-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">

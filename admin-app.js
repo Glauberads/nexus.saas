@@ -159,6 +159,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-automations') await loadAutomationsModule();
   else if (moduleId === 'module-whatsapp-crm') await loadWhatsappCrmModule();
   else if (moduleId === 'module-ads') await loadAdsModule();
+  else if (moduleId === 'module-gateways') await loadGatewaysModule();
   else if (moduleId === 'module-products') await loadProductsModule();
   else if (moduleId === 'module-members') await loadMembersModule();
 }
@@ -1418,6 +1419,53 @@ async function loadAdsModule() {
       tbodyCamp.appendChild(tr);
     });
   }
+}
+
+// ==========================================
+// 12.2. GATEWAYS DISPONÍVEIS (ENTERPRISE)
+// ==========================================
+async function loadGatewaysModule() {
+  if (!supabaseClient) return;
+
+  // KPIs Simulados/Básicos para demonstração inicial (será enriquecido depois)
+  const { data: events } = await supabaseClient.from('gateway_events')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const { data: refunds } = await supabaseClient.from('refunds').select('id');
+  const { data: subscriptions } = await supabaseClient.from('subscriptions').select('amount').eq('status', 'ACTIVE');
+  
+  let mrr = 0;
+  if (subscriptions) {
+    subscriptions.forEach(s => mrr += parseFloat(s.amount));
+  }
+
+  document.getElementById('kpi-gw-mrr').textContent = 'R$ ' + mrr.toFixed(2);
+  document.getElementById('kpi-gw-refunds').textContent = refunds ? refunds.length : 0;
+
+  const tbody = document.getElementById('gw-events-tbody');
+  tbody.innerHTML = '';
+
+  if (!events || events.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhum evento registrado ainda.</td></tr>';
+    return;
+  }
+
+  events.forEach(e => {
+    const tr = document.createElement('tr');
+    const color = e.status === 'processed' ? 'var(--success)' : (e.status === 'failed' ? 'var(--danger)' : '#F59E0B');
+    tr.innerHTML = `
+      <td>${new Date(e.created_at).toLocaleString('pt-BR')}</td>
+      <td style="text-transform: capitalize;">${e.gateway}</td>
+      <td style="font-family: monospace; font-size: 11px;">${e.event_type}</td>
+      <td style="color: ${color}; font-weight: 600;">${e.status === 'processed' ? 'Sim' : 'Não'}</td>
+      <td>
+        <button style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; cursor: pointer;" onclick="alert('Payload:\\n' + JSON.stringify(${JSON.stringify(e.payload).replace(/'/g, "\\'")}, null, 2))">Ver Payload</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 // ==========================================
