@@ -1449,23 +1449,22 @@ async function loadGatewaysModule() {
 
   if (!events || events.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhum evento registrado ainda.</td></tr>';
-    return;
+  } else {
+    events.forEach(e => {
+      const tr = document.createElement('tr');
+      const color = e.status === 'processed' ? 'var(--success)' : (e.status === 'failed' ? 'var(--danger)' : '#F59E0B');
+      tr.innerHTML = `
+        <td>${new Date(e.created_at).toLocaleString('pt-BR')}</td>
+        <td style="text-transform: capitalize;">${e.gateway}</td>
+        <td style="font-family: monospace; font-size: 11px;">${e.event_type}</td>
+        <td style="color: ${color}; font-weight: 600;">${e.status === 'processed' ? 'Sim' : 'Não'}</td>
+        <td>
+          <button style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; cursor: pointer;" onclick="alert('Payload:\\n' + JSON.stringify(${JSON.stringify(e.payload).replace(/'/g, "\\'")}, null, 2))">Ver Payload</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
   }
-
-  events.forEach(e => {
-    const tr = document.createElement('tr');
-    const color = e.status === 'processed' ? 'var(--success)' : (e.status === 'failed' ? 'var(--danger)' : '#F59E0B');
-    tr.innerHTML = `
-      <td>${new Date(e.created_at).toLocaleString('pt-BR')}</td>
-      <td style="text-transform: capitalize;">${e.gateway}</td>
-      <td style="font-family: monospace; font-size: 11px;">${e.event_type}</td>
-      <td style="color: ${color}; font-weight: 600;">${e.status === 'processed' ? 'Sim' : 'Não'}</td>
-      <td>
-        <button style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; cursor: pointer;" onclick="alert('Payload:\\n' + JSON.stringify(${JSON.stringify(e.payload).replace(/'/g, "\\'")}, null, 2))">Ver Payload</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
 
   // Call loadProductsModule as it is now part of Central Financeira
   await loadProductsModule();
