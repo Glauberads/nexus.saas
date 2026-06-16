@@ -6,13 +6,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+async function getCryptoKey(secretString: string): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const secretKeyData = enc.encode(secretString);
+  const hash = await crypto.subtle.digest('SHA-256', secretKeyData);
+  return crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+async function decryptData(encryptedBase64: string, secretString: string): Promise<string> {
+  if (!encryptedBase64) return '';
+  const parts = encryptedBase64.split(':');
+  if (parts.length !== 2) throw new Error('Invalid encrypted format');
+  const ivStr = atob(parts[0]);
+  const cipherStr = atob(parts[1]);
+  const iv = new Uint8Array(ivStr.length);
+  for (let i = 0; i < ivStr.length; i++) iv[i] = ivStr.charCodeAt(i);
+  const cipher = new Uint8Array(cipherStr.length);
+  for (let i = 0; i < cipherStr.length; i++) cipher[i] = cipherStr.charCodeAt(i);
+  const key = await getCryptoKey(secretString);
+  const decryptedBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+  return new TextDecoder().decode(decryptedBuffer);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { lead_id, checkout_session_id, product_slug, name, email, cpfCnpj, phone, billingType, description, dueDate } = await req.json();
+    const { lead_id, checkout_session_id, product_slug, name, email, cpfCnpj, phone, billingType, description, dueDate, installments } = await req.json();
 
     if (!email || !billingType || !product_slug) {
       throw new Error('Missing required fields: email, billingType, product_slug');
@@ -22,11 +44,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const asaasKey = Deno.env.get('ASAAS_API_KEY');
-    const asaasEnv = Deno.env.get('ASAAS_ENVIRONMENT') || 'sandbox';
-    const baseUrl = asaasEnv === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://api.asaas.com/v3';
+    const encryptionSecret = Deno.env.get('GATEWAY_ENCRYPTION_SECRET');
+    if (!encryptionSecret) throw new Error('Encryption secret not configured');
 
-    if (!asaasKey) throw new Error('ASAAS_API_KEY not configured');
+    const { data: settings } = await supabase.from('gateway_settings').select('*').eq('gateway_name', 'asaas').single();
+    if (!settings || !settings.api_key_encrypted || !settings.is_active) {
+      throw new Error('Gateway Asaas is not configured or disabled');
+    }
+
+    const asaasKey = await decryptData(settings.api_key_encrypted, encryptionSecret);
+    const asaasEnv = settings.environment || 'sandbox';
+    const baseUrl = asaasEnv === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://api.asaas.com/v3';
 
     // 0. Validar Produto e Obter Preço Real
     const { data: product, error: prodErr } = await supabase.from('products').select('*').eq('checkout_slug', product_slug).single();
@@ -68,14 +96,31 @@ serve(async (req) => {
     }
 
     // 2. Criar Cobrança
-    const paymentPayload = {
+    let finalValue = realPrice;
+    
+    // Apply PIX Discount if applicable
+    if (billingType === 'PIX' && product.pix_discount > 0) {
+      const discountAmount = finalValue * (product.pix_discount / 100);
+      finalValue = finalValue - discountAmount;
+    }
+    
+    const paymentPayload: any = {
       customer: customerId,
       billingType,
-      value: realPrice,
+      value: finalValue,
       dueDate: dueDate || new Date(Date.now() + 86400000).toISOString().split('T')[0], // Amanhã
       description: description || `Compra: ${product.name}`,
       externalReference: checkout_session_id
     };
+
+    // Handle installments if CREDIT_CARD
+    if (billingType === 'CREDIT_CARD' && installments > 1) {
+       // Asaas has a different endpoint for installments but for simplification of this MVP
+       paymentPayload.installmentCount = Math.min(installments, product.max_installments || 12);
+       paymentPayload.installmentValue = finalValue / paymentPayload.installmentCount;
+       // We'll let Asaas handle the exact breakdown if we were using the full installment API, 
+       // but assuming standard payment payload handles basic fields.
+    }
 
     const payRes = await fetch(`${baseUrl}/payments`, {
       method: 'POST',

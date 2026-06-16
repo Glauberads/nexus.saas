@@ -6,6 +6,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, asaas-access-token',
 };
 
+async function getCryptoKey(secretString: string): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const secretKeyData = enc.encode(secretString);
+  const hash = await crypto.subtle.digest('SHA-256', secretKeyData);
+  return crypto.subtle.importKey('raw', hash, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+async function decryptData(encryptedBase64: string, secretString: string): Promise<string> {
+  if (!encryptedBase64) return '';
+  const parts = encryptedBase64.split(':');
+  if (parts.length !== 2) throw new Error('Invalid encrypted format');
+  const ivStr = atob(parts[0]);
+  const cipherStr = atob(parts[1]);
+  const iv = new Uint8Array(ivStr.length);
+  for (let i = 0; i < ivStr.length; i++) iv[i] = ivStr.charCodeAt(i);
+  const cipher = new Uint8Array(cipherStr.length);
+  for (let i = 0; i < cipherStr.length; i++) cipher[i] = cipherStr.charCodeAt(i);
+  const key = await getCryptoKey(secretString);
+  const decryptedBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+  return new TextDecoder().decode(decryptedBuffer);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -13,7 +35,19 @@ serve(async (req) => {
 
   try {
     const asaasToken = req.headers.get('asaas-access-token');
-    const expectedToken = Deno.env.get('ASAAS_WEBHOOK_TOKEN');
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const encryptionSecret = Deno.env.get('GATEWAY_ENCRYPTION_SECRET');
+    if (!encryptionSecret) throw new Error('Encryption secret not configured');
+
+    const { data: settings } = await supabase.from('gateway_settings').select('webhook_token_encrypted').eq('gateway_name', 'asaas').single();
+    let expectedToken = null;
+    if (settings && settings.webhook_token_encrypted) {
+      expectedToken = await decryptData(settings.webhook_token_encrypted, encryptionSecret);
+    }
 
     if (expectedToken && asaasToken !== expectedToken) {
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
@@ -27,9 +61,8 @@ serve(async (req) => {
       return new Response('Ignored', { status: 200, headers: corsHeaders });
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const criticalEvents = ['PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE', 'PAYMENT_FAILED', 'PAYMENT_CREDIT_CARD_CAPTURE_REFUSED'];
+    const keepForever = criticalEvents.includes(eventType);
 
     // 1. Idempotência usando UNIQUE CONSTRAINT em gateway_events
     const { error: insertError } = await supabase.from('gateway_events').insert([{
@@ -37,7 +70,8 @@ serve(async (req) => {
       event_type: eventType,
       status: 'processed',
       payload: payload,
-      event_id: payload.id // Este campo é UNIQUE
+      event_id: payload.id, // Este campo é UNIQUE
+      keep_forever: keepForever
     }]);
 
     // Se violar o UNIQUE (código 23505 no Postgres), já processamos. Ignora com 200 pro Asaas parar de mandar.

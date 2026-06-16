@@ -1466,6 +1466,130 @@ async function loadGatewaysModule() {
     `;
     tbody.appendChild(tr);
   });
+
+  // Call loadProductsModule as it is now part of Central Financeira
+  await loadProductsModule();
+  
+  // Load Gateway Settings to update badges
+  const { data: settings } = await supabaseClient.from('gateway_settings').select('*');
+  if (settings) {
+    const asaas = settings.find(s => s.gateway_name === 'asaas');
+    const badge = document.getElementById('gw-asaas-badge');
+    if (asaas && badge) {
+      if (asaas.is_active) {
+        badge.textContent = 'Online';
+        badge.style.background = 'rgba(16,185,129,0.1)';
+        badge.style.color = '#10B981';
+      } else {
+        badge.textContent = 'Inativo';
+        badge.style.background = 'rgba(255,255,255,0.1)';
+        badge.style.color = 'var(--text-muted)';
+      }
+    }
+  }
+}
+
+// ==========================================
+// CENTRAL FINANCEIRA: GATEWAYS (FUNCTIONS)
+// ==========================================
+window.openGatewayModal = async function(gatewayName) {
+  document.getElementById('gw-name').value = gatewayName;
+  document.getElementById('modal-gateway-title').textContent = `Configurar Gateway: ${gatewayName.toUpperCase()}`;
+  
+  // Reset
+  document.getElementById('gw-api-key').value = '';
+  document.getElementById('gw-webhook-token').value = '';
+  
+  const { data } = await supabaseClient.from('gateway_settings').select('*').eq('gateway_name', gatewayName).single();
+  if (data) {
+    document.getElementById('gw-env').value = data.environment || 'sandbox';
+    document.getElementById('gw-active').value = data.is_active ? 'true' : 'false';
+    if (data.api_key_encrypted) document.getElementById('gw-api-key').placeholder = '******** (Preenchida)';
+    if (data.webhook_token_encrypted) document.getElementById('gw-webhook-token').placeholder = '******** (Preenchida)';
+  } else {
+    document.getElementById('gw-env').value = 'sandbox';
+    document.getElementById('gw-active').value = 'false';
+    document.getElementById('gw-api-key').placeholder = 'Cole a sua API Key aqui';
+    document.getElementById('gw-webhook-token').placeholder = 'Cole o token do Webhook';
+  }
+  
+  document.getElementById('modal-gateway-settings').style.display = 'flex';
+}
+
+window.saveGatewaySettings = async function() {
+  const gateway = document.getElementById('gw-name').value;
+  const environment = document.getElementById('gw-env').value;
+  const isActive = document.getElementById('gw-active').value === 'true';
+  const apiKey = document.getElementById('gw-api-key').value;
+  const webhookToken = document.getElementById('gw-webhook-token').value;
+
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const res = await fetch('https://wkomsnqucatqepabepje.supabase.co/functions/v1/gateway-settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ gateway, environment, isActive, apiKey, webhookToken })
+    });
+    
+    const result = await res.json();
+    if (result.success) {
+      alert('Configurações salvas com sucesso!');
+      document.getElementById('modal-gateway-settings').style.display = 'none';
+      await loadGatewaysModule();
+    } else {
+      alert('Erro: ' + result.error);
+    }
+  } catch (err) {
+    alert('Erro ao salvar configurações.');
+  }
+}
+
+window.testGatewayConnection = async function() {
+  const gateway = document.getElementById('gw-name').value;
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const res = await fetch('https://wkomsnqucatqepabepje.supabase.co/functions/v1/gateway-test', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ gateway })
+    });
+    
+    const result = await res.json();
+    if (result.success) {
+      alert('✅ ' + result.message);
+    } else {
+      alert('❌ Erro: ' + result.error);
+    }
+  } catch (err) {
+    alert('Erro ao testar conexão.');
+  }
+}
+
+window.cleanOldLogs = async function() {
+  if (!confirm('Deseja limpar todos os logs de webhooks com mais de 30 dias? Eventos críticos (pagamentos falhos, estornos) serão mantidos se marcados no banco.')) return;
+  
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { error } = await supabaseClient.from('gateway_events')
+      .delete()
+      .lt('created_at', thirtyDaysAgo.toISOString())
+      .eq('keep_forever', false);
+      
+    if (error) throw error;
+    alert('Logs antigos limpos com sucesso!');
+    await loadGatewaysModule();
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao limpar logs.');
+  }
 }
 
 // ==========================================
@@ -1607,6 +1731,8 @@ window.editProduct = async function(id) {
     if(document.getElementById('prod-thank-you')) document.getElementById('prod-thank-you').value = p.thank_you_url || '';
     if(document.getElementById('prod-sales-page')) document.getElementById('prod-sales-page').value = p.sales_page_url || '';
     if(document.getElementById('prod-checkout-enabled')) document.getElementById('prod-checkout-enabled').value = p.checkout_enabled ? 'true' : 'false';
+    if(document.getElementById('prod-pix-discount')) document.getElementById('prod-pix-discount').value = p.pix_discount || '';
+    if(document.getElementById('prod-max-installments')) document.getElementById('prod-max-installments').value = p.max_installments || 12;
 
     document.getElementById('modal-product').style.display = 'flex';
   }
@@ -1633,6 +1759,8 @@ window.saveProduct = async function() {
   if(document.getElementById('prod-thank-you')) payload.thank_you_url = document.getElementById('prod-thank-you').value;
   if(document.getElementById('prod-sales-page')) payload.sales_page_url = document.getElementById('prod-sales-page').value;
   if(document.getElementById('prod-checkout-enabled')) payload.checkout_enabled = document.getElementById('prod-checkout-enabled').value === 'true';
+  if(document.getElementById('prod-pix-discount')) payload.pix_discount = parseFloat(document.getElementById('prod-pix-discount').value || 0);
+  if(document.getElementById('prod-max-installments')) payload.max_installments = parseInt(document.getElementById('prod-max-installments').value || 12);
 
   if (!payload.name || !payload.slug) {
     alert("Nome e Slug são obrigatórios.");
