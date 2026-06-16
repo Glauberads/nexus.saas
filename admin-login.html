@@ -155,12 +155,21 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="tracking.js"></script>
   <script src="supabase-client.js"></script>
   <script>
+    let supabaseClient = null;
+
     document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize Supabase Auth Client
+      if (window.supabase && window.NexusTracker && window.NexusTracker.config) {
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.NexusTracker.config;
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+
       // Check if already logged in
-      if (window.supabase) {
-        const { data: { session } } = await window.supabase.auth.getSession();
+      if (supabaseClient) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
         if (session && session.user.email === 'suporteglauberr@gmail.com') {
           window.location.href = 'admin-dashboard.html';
         }
@@ -182,8 +191,8 @@
         return;
       }
       
-      if (!window.supabase) {
-        showError('Erro de conexão com o Supabase.');
+      if (!supabaseClient) {
+        showError('Erro de inicialização do Supabase.');
         return;
       }
       
@@ -191,7 +200,7 @@
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = 'Autenticando...';
         
-        const { data, error } = await window.supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
           email,
           password
         });
@@ -202,7 +211,7 @@
           window.location.href = 'admin-dashboard.html';
         } else {
           // Extra safeguard
-          await window.supabase.auth.signOut();
+          await supabaseClient.auth.signOut();
           throw new Error('Acesso negado para este usuário.');
         }
         

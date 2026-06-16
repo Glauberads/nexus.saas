@@ -20,18 +20,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ==========================================
 // 1. AUTH GUARD
 // ==========================================
+let supabaseClient = null;
+
 async function verifyAuth() {
-  if (!window.supabase) {
-    console.error("Supabase client not found.");
+  if (window.supabase && window.NexusTracker && window.NexusTracker.config) {
+    const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.NexusTracker.config;
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  if (!supabaseClient) {
+    console.error("Supabase client could not be initialized.");
+    window.location.href = 'admin-login.html';
     return;
   }
   
-  const { data: { session } } = await window.supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   
   // Verifica se não há sessão ou se o e-mail não é o autorizado
   if (!session || session.user.email !== 'suporteglauberr@gmail.com') {
     if (session) {
-      await window.supabase.auth.signOut(); // forçar logout se logou com conta errada
+      await supabaseClient.auth.signOut(); // forçar logout se logou com conta errada
     }
     window.location.href = 'admin-login.html';
     return;
@@ -46,7 +54,7 @@ async function verifyAuth() {
   if (btnLogout) {
     btnLogout.addEventListener('click', async (e) => {
       e.preventDefault();
-      await window.supabase.auth.signOut();
+      await supabaseClient.auth.signOut();
       window.location.href = 'admin-login.html';
     });
   }
@@ -192,14 +200,14 @@ async function openLeadDrawer(leadId) {
   document.getElementById('drawer-email').textContent = "";
   document.getElementById('drawer-timeline').innerHTML = "";
 
-  const { data: lead, error } = await window.supabase.from('leads').select('*').eq('id', leadId).single();
+  const { data: lead, error } = await supabaseClient.from('leads').select('*').eq('id', leadId).single();
   if (!lead) return;
 
   document.getElementById('drawer-name').textContent = lead.name || 'Lead Anônimo';
   document.getElementById('drawer-email').textContent = `${lead.email || ''} | ${lead.whatsapp || ''}`;
   
   // Buscar Jornada
-  const { data: journey } = await window.supabase.from('lead_journey').select('*').eq('lead_id', leadId).order('created_at', { ascending: true });
+  const { data: journey } = await supabaseClient.from('lead_journey').select('*').eq('lead_id', leadId).order('created_at', { ascending: true });
   
   const timelineContainer = document.getElementById('drawer-timeline');
   timelineContainer.innerHTML = '';
@@ -225,9 +233,9 @@ async function openLeadDrawer(leadId) {
 // 5. REALTIME FEED
 // ==========================================
 function setupRealtime() {
-  if (!window.supabase) return;
+  if (!supabaseClient) return;
   
-  window.supabase.channel('public:events')
+  supabaseClient.channel('public:events')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, payload => {
       const eventName = payload.new.event_name;
       // Recarrega Dashboard se for evento crucial
