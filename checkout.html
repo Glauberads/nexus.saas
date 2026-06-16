@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusSaaS | Pagamento Seguro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-main: #0A0A0A;
+      --bg-card: #161616;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-focus: rgba(139, 92, 246, 0.5);
+      --text-primary: #EDEDED;
+      --text-secondary: #A1A1AA;
+      --text-muted: #71717A;
+      --accent: #8B5CF6;
+      --accent-hover: #7C3AED;
+      --success: #22C55E;
+      --danger: #EF4444;
+      --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      padding: 24px 0;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,10,10,0.8);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
+    }
+
+    .header h1 {
+      font-size: 24px; font-weight: 800;
+    }
+    .header h1 span { color: var(--accent); }
+
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 40px;
+    }
+
+    @media (max-width: 900px) {
+      .container { grid-template-columns: 1fr; }
+      .order-summary { order: -1; } /* Mostra resumo primeiro no mobile */
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+    .form-control {
+      width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: 8px; color: white; font-family: inherit; font-size: 15px; transition: 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: var(--border-focus); background: rgba(0,0,0,0.5); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* Tabs de Pagamento */
+    .payment-tabs { display: flex; gap: 12px; margin-bottom: 24px; }
+    .tab-btn {
+      flex: 1; padding: 14px; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .tab-btn:hover { border-color: rgba(255,255,255,0.2); color: white; }
+    .tab-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(139, 92, 246, 0.05); }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+    .btn-submit {
+      width: 100%; padding: 16px; background: var(--success); color: #000;
+      border: none; border-radius: 8px; font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-submit:hover { filter: brightness(1.1); transform: translateY(-2px); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; filter: none; }
+
+    /* Order Summary */
+    .order-summary .p-cover { width: 100%; height: 180px; background: #222; border-radius: 8px; margin-bottom: 24px; background-size: cover; background-position: center; }
+    .order-summary .p-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .order-summary .p-price { font-size: 32px; font-weight: 800; color: var(--success); margin: 24px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 24px 0; }
+    
+    .guarantee-badge { display: flex; align-items: center; gap: 12px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 16px; border-radius: 8px; margin-top: 24px; }
+    
+    .loader-overlay {
+      position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8);
+      display:none; align-items:center; justify-content:center; flex-direction:column; z-index:999; backdrop-filter:blur(5px);
+    }
+    .spinner { width:40px; height:40px; border:4px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:16px;}
+    @keyframes spin { to {transform: rotate(360deg);} }
+
+    /* Exibição do PIX */
+    .pix-container { text-align: center; padding: 24px; background: rgba(34,197,94,0.05); border: 1px solid var(--success); border-radius: 12px; display: none; }
+    .pix-qr { width: 200px; height: 200px; margin: 16px auto; background: white; padding: 8px; border-radius: 8px; }
+    .pix-qr img { width: 100%; height: 100%; }
+    .pix-copy { background: #000; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #a1a1aa; word-break: break-all; margin-bottom: 16px; }
+    
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h1>⬡ Nexus<span>SaaS</span></h1>
+  </header>
+
+  <div class="loader-overlay" id="loader">
+    <div class="spinner"></div>
+    <h3 id="loader-text">Processando ambiente seguro...</h3>
+  </div>
+
+  <main class="container">
+    <!-- LADO ESQUERDO: DADOS E PAGAMENTO -->
+    <div class="checkout-form">
+      
+      <div class="card" id="step-1">
+        <div class="card-title"><span style="background: var(--accent); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px;">1</span> Seus Dados</div>
+        <div class="form-group">
+          <label>Nome Completo</label>
+          <input type="text" id="c-name" class="form-control" placeholder="Digite seu nome completo">
+        </div>
+        <div class="form-group">
+          <label>E-mail (Para receber o acesso)</label>
+          <input type="email" id="c-email" class="form-control" placeholder="seu.melhor@email.com" onblur="captureLead()">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>WhatsApp</label>
+            <input type="text" id="c-phone" class="form-control" placeholder="(00) 00000-0000" maxlength="15" onblur="captureLead()">
+          </div>
+          <div class="form-group">
+            <label>CPF / CNPJ</label>
+            <input type="text" id="c-cpf" class="form-control" placeholder="000.000.000-00" maxlength="18">
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="step-2">
+        <div class="card-title"><span style="background: var(--accent); color: white; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px;">2</span> Pagamento</div>
+        
+        <div class="payment-tabs">
+          <div class="tab-btn active" onclick="setPaymentMethod('PIX', this)">
+            <span style="font-size: 24px;">❖</span>
+            PIX
+          </div>
+          <div class="tab-btn" onclick="setPaymentMethod('CREDIT_CARD', this)">
+            <span style="font-size: 24px;">💳</span>
+            Cartão
+          </div>
+          <div class="tab-btn" onclick="setPaymentMethod('BOLETO', this)">
+            <span style="font-size: 24px;">📄</span>
+            Boleto
+          </div>
+        </div>
+
+        <div id="tab-PIX" class="tab-content active">
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Pagamento instantâneo. Liberação imediata do acesso.</p>
+          <button class="btn-submit" onclick="processPayment()">Gerar PIX Segundos</button>
+        </div>
+
+        <div id="tab-CREDIT_CARD" class="tab-content">
+          <div style="padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: 8px;">
+            <p style="color: var(--text-secondary); margin-bottom: 8px;">Opção em breve.</p>
+            <p style="font-size: 12px; color: var(--text-muted);">Por segurança, estamos finalizando a integração de tokenização (PCI Compliance). Por favor, utilize o PIX no momento.</p>
+          </div>
+        </div>
+
+        <div id="tab-BOLETO" class="tab-content">
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Vencimento em 3 dias úteis. A liberação ocorre após a compensação.</p>
+          <button class="btn-submit" onclick="processPayment()">Gerar Boleto Bancário</button>
+        </div>
+
+        <!-- AREA DO PIX GERADO -->
+        <div id="pix-area" class="pix-container">
+          <h3 style="color: var(--success); margin-bottom: 8px;">PIX Gerado com Sucesso!</h3>
+          <p style="font-size: 13px; color: var(--text-secondary);">Escaneie o QR Code abaixo ou use o código Copia e Cola.</p>
+          
+          <div class="pix-qr" id="pix-img-container"></div>
+          
+          <p style="font-size: 12px; font-weight: bold; margin-bottom: 8px; text-align: left;">Código Copia e Cola:</p>
+          <div class="pix-copy" id="pix-copy-text">...</div>
+          <button onclick="copyPix()" style="width: 100%; padding: 12px; background: transparent; border: 1px solid var(--success); color: var(--success); border-radius: 8px; font-weight: bold; cursor: pointer;">Copiar Código PIX</button>
+          
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(34,197,94,0.2);">
+            <div class="spinner" style="width: 20px; height: 20px; margin: 0 auto 8px auto; border-width: 2px;"></div>
+            <p style="font-size: 11px; color: var(--text-secondary);">Aguardando pagamento... Não feche esta página.</p>
+          </div>
+        </div>
+
+        <!-- AREA DO BOLETO GERADO -->
+        <div id="boleto-area" style="display: none; text-align: center; padding: 24px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px;">
+          <h3 style="margin-bottom: 16px;">Boleto Gerado!</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">Clique no botão abaixo para baixar/imprimir seu boleto.</p>
+          <button id="btn-open-boleto" style="padding: 12px 24px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 8px; cursor: pointer;">Visualizar Boleto</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- LADO DIREITO: RESUMO -->
+    <div class="order-summary">
+      <div class="card" style="position: sticky; top: 100px;">
+        <h2 style="font-size: 16px; margin-bottom: 24px; color: var(--text-secondary); text-transform: uppercase;">Resumo do Pedido</h2>
+        <div class="p-cover" id="product-cover"></div>
+        <div class="p-title" id="product-name">Carregando produto...</div>
+        <p style="font-size: 13px; color: var(--text-secondary);" id="product-desc"></p>
+        
+        <div class="p-price" id="product-price">R$ 0,00</div>
+
+        <ul style="list-style: none; font-size: 13px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 12px;">
+          <li style="display: flex; gap: 8px;">✅ Acesso imediato e vitalício (via PIX/Cartão)</li>
+          <li style="display: flex; gap: 8px;">✅ Suporte Premium</li>
+          <li style="display: flex; gap: 8px;">✅ Atualizações Inclusas</li>
+        </ul>
+
+        <div class="guarantee-badge">
+          <div style="font-size: 32px;">🛡️</div>
+          <div>
+            <h4 style="color: var(--success); font-size: 14px; margin-bottom: 4px;">Garantia de 7 Dias</h4>
+            <p style="font-size: 11px; color: rgba(255,255,255,0.6);">Risco Zero. Seu dinheiro de volta se não gostar.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <span style="font-size: 10px; color: var(--text-muted);">Ambiente 100% Seguro e Criptografado</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--success);"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mascaras simples -->
+  <script>
+    document.getElementById('c-cpf').addEventListener('input', function (e) {
+      let x = e.target.value.replace(/\D/g, '');
+      if(x.length <= 11) {
+        // CPF
+        x = x.replace(/(\d{3})(\d)/, '$1.$2');
+        x = x.replace(/(\d{3})(\d)/, '$1.$2');
+        x = x.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      } else {
+        // CNPJ
+        x = x.replace(/^(\d{2})(\d)/, '$1.$2');
+        x = x.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        x = x.replace(/\.(\d{3})(\d)/, '.$1/$2');
+        x = x.replace(/(\d{4})(\d)/, '$1-$2');
+      }
+      e.target.value = x;
+    });
+
+    document.getElementById('c-phone').addEventListener('input', function (e) {
+      let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+      e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+    });
+  </script>
+
+  <script src="nexus-tracker.js"></script>
+  <script src="checkout-app.js"></script>
+</body>
+</html>

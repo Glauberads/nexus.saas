@@ -60,11 +60,25 @@ serve(async (req) => {
       }).eq('asaas_payment_id', payment.id);
 
       // Se não houver purchase_id vinculada, vamos criar na tabela purchases para consolidar a receita.
-      // E acionar o workflow n8n
       if (internalPayment && !internalPayment.purchase_id && internalPayment.lead_id) {
+        let checkoutSessionId = payment.externalReference || null;
+        let productName = payment.description || 'Produto Asaas';
+        
+        if (checkoutSessionId) {
+          // Atualiza status do checkout session
+          await supabase.from('checkout_sessions').update({ status: 'paid' }).eq('id', checkoutSessionId);
+          
+          // Tenta buscar o nome do produto da checkout session
+          const { data: sessionData } = await supabase.from('checkout_sessions').select('product_slug').eq('id', checkoutSessionId).single();
+          if (sessionData && sessionData.product_slug) {
+            const { data: prodData } = await supabase.from('products').select('name').eq('checkout_slug', sessionData.product_slug).single();
+            if (prodData) productName = prodData.name;
+          }
+        }
+
         const { data: newPurchase } = await supabase.from('purchases').insert([{
           lead_id: internalPayment.lead_id,
-          product_name: payment.description || 'Produto Asaas',
+          product_name: productName,
           amount: payment.value,
           status: 'approved',
           gateway: 'asaas',
