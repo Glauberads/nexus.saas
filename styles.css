@@ -1972,4 +1972,12 @@ ul { list-style: none; }
   .vault-grid { grid-template-columns: repeat(2, 1fr); }
   .hero-stats { gap: 8px; }
   .stat-item { padding: 0 16px; }
+  .lm-wrapper { padding: 16px; gap: 24px; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .lm-form-wrapper { padding: 16px; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .pricing-card-header, .pricing-includes, .pricing-cta-area { padding: 16px; }
+  .modal-content { padding: 24px 16px; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .btn-primary, .btn-secondary, .btn-block { padding: 14px 16px; white-space: normal; word-break: break-word; text-align: center; width: 100%; max-width: 100%; box-sizing: border-box; }
+  .form-group, .form-group input { width: 100%; max-width: 100%; box-sizing: border-box; padding: 14px 16px; font-size: 15px; }
+  .lm-title { font-size: 24px; word-break: break-word; }
+  .container { padding: 0 16px; width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden; }
 }
