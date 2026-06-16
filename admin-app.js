@@ -159,6 +159,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-automations') await loadAutomationsModule();
   else if (moduleId === 'module-whatsapp-crm') await loadWhatsappCrmModule();
   else if (moduleId === 'module-ads') await loadAdsModule();
+  else if (moduleId === 'module-products') await loadProductsModule();
   else if (moduleId === 'module-members') await loadMembersModule();
 }
 
@@ -1417,6 +1418,202 @@ async function loadAdsModule() {
       tbodyCamp.appendChild(tr);
     });
   }
+}
+
+// ==========================================
+// 12.1. PRODUTOS (CMS)
+// ==========================================
+let currentEditingProductId = null;
+
+async function loadProductsModule() {
+  if (!supabaseClient) return;
+
+  const { data: products } = await supabaseClient.from('products').select('*').order('sort_order', { ascending: true });
+  const { data: versions } = await supabaseClient.from('product_versions').select('*');
+  const { data: downloads } = await supabaseClient.from('member_downloads').select('id');
+
+  const active = products ? products.filter(p => p.status === 'active') : [];
+  const bonus = products ? products.filter(p => p.is_bonus && p.status === 'active') : [];
+
+  document.getElementById('kpi-products-active').textContent = active.length;
+  document.getElementById('kpi-products-versions').textContent = versions ? versions.length : 0;
+  document.getElementById('kpi-products-downloads').textContent = downloads ? downloads.length : 0;
+  document.getElementById('kpi-products-bonus').textContent = bonus.length;
+
+  const tbody = document.getElementById('products-tbody');
+  tbody.innerHTML = '';
+
+  if (!products || products.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum produto cadastrado.</td></tr>';
+    return;
+  }
+
+  products.forEach(p => {
+    const tr = document.createElement('tr');
+    const statusColor = p.status === 'active' ? 'var(--success)' : (p.status === 'draft' ? '#F59E0B' : 'var(--danger)');
+    
+    // Find current version
+    const pVersions = versions ? versions.filter(v => v.product_id === p.id) : [];
+    const currentV = pVersions.find(v => v.is_current) || pVersions[0];
+    const vText = currentV ? currentV.version : 'Sem versão';
+
+    tr.innerHTML = `
+      <td>
+        <img src="${p.thumbnail_url || 'https://via.placeholder.com/60x60/161616/8B5CF6?text=' + p.name.charAt(0)}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+      </td>
+      <td>
+        <div style="font-weight: 600;">${p.name} ${p.is_featured ? '⭐' : ''}</div>
+        <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">/${p.slug}</div>
+      </td>
+      <td>${p.category || 'Geral'}</td>
+      <td>
+        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B; text-transform: uppercase;">${p.access_type || 'core'}</span>
+      </td>
+      <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${p.status}</td>
+      <td>
+        <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px;">Editar</button>
+        <button onclick="window.openVersionsModal('${p.id}', '${p.name}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer;">Versões</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.openProductModal = function() {
+  currentEditingProductId = null;
+  document.getElementById('modal-product-title').textContent = 'Novo Produto';
+  
+  // Clear fields
+  ['prod-name', 'prod-slug', 'prod-desc', 'prod-cat', 'prod-thumb', 'prod-video', 'prod-doc'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('prod-type').value = 'core';
+  document.getElementById('prod-status').value = 'active';
+  document.getElementById('prod-license').value = 'true';
+  document.getElementById('prod-featured').value = 'false';
+  
+  document.getElementById('modal-product').style.display = 'flex';
+}
+
+window.editProduct = async function(id) {
+  currentEditingProductId = id;
+  document.getElementById('modal-product-title').textContent = 'Editar Produto';
+  
+  const { data: p } = await supabaseClient.from('products').select('*').eq('id', id).single();
+  if (p) {
+    document.getElementById('prod-name').value = p.name || '';
+    document.getElementById('prod-slug').value = p.slug || '';
+    document.getElementById('prod-desc').value = p.description || '';
+    document.getElementById('prod-cat').value = p.category || '';
+    document.getElementById('prod-type').value = p.access_type || 'core';
+    document.getElementById('prod-status').value = p.status || 'active';
+    document.getElementById('prod-license').value = p.requires_license ? 'true' : 'false';
+    document.getElementById('prod-featured').value = p.is_featured ? 'true' : 'false';
+    document.getElementById('prod-thumb').value = p.thumbnail_url || '';
+    document.getElementById('prod-video').value = p.video_url || '';
+    document.getElementById('prod-doc').value = p.documentation_url || '';
+    
+    document.getElementById('modal-product').style.display = 'flex';
+  }
+}
+
+window.saveProduct = async function() {
+  const payload = {
+    name: document.getElementById('prod-name').value,
+    slug: document.getElementById('prod-slug').value,
+    description: document.getElementById('prod-desc').value,
+    category: document.getElementById('prod-cat').value,
+    access_type: document.getElementById('prod-type').value,
+    status: document.getElementById('prod-status').value,
+    requires_license: document.getElementById('prod-license').value === 'true',
+    is_featured: document.getElementById('prod-featured').value === 'true',
+    is_bonus: document.getElementById('prod-type').value === 'bonus',
+    thumbnail_url: document.getElementById('prod-thumb').value,
+    video_url: document.getElementById('prod-video').value,
+    documentation_url: document.getElementById('prod-doc').value
+  };
+
+  if (!payload.name || !payload.slug) {
+    alert("Nome e Slug são obrigatórios.");
+    return;
+  }
+
+  if (currentEditingProductId) {
+    await supabaseClient.from('products').update(payload).eq('id', currentEditingProductId);
+  } else {
+    await supabaseClient.from('products').insert([payload]);
+  }
+  
+  document.getElementById('modal-product').style.display = 'none';
+  loadProductsModule();
+}
+
+let currentVersionProductId = null;
+window.openVersionsModal = async function(id, name) {
+  currentVersionProductId = id;
+  document.getElementById('v-prod-name').textContent = name;
+  document.getElementById('modal-versions').style.display = 'flex';
+  await loadVersionsList();
+}
+
+async function loadVersionsList() {
+  const tbody = document.getElementById('versions-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Carregando...</td></tr>';
+  
+  const { data: versions } = await supabaseClient.from('product_versions')
+    .select('*').eq('product_id', currentVersionProductId)
+    .order('created_at', { ascending: false });
+    
+  tbody.innerHTML = '';
+  if (!versions || versions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma versão cadastrada.</td></tr>';
+    return;
+  }
+  
+  versions.forEach(v => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span style="font-weight: bold;">v${v.version}</span> ${v.is_current ? '<span class="badge" style="background:var(--success);color:#000;">Atual</span>' : ''}</td>
+      <td>${new Date(v.created_at).toLocaleDateString('pt-BR')}</td>
+      <td style="font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${v.changelog || ''}</td>
+      <td>
+        <button style="background:none; border:none; color: var(--danger); cursor:pointer;" onclick="alert('Funcionalidade em desenvolvimento')">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+window.saveVersion = async function() {
+  const version = document.getElementById('v-version').value;
+  const download_url = document.getElementById('v-download').value;
+  const file_size = document.getElementById('v-size').value;
+  const changelog = document.getElementById('v-changelog').value;
+  
+  if (!version) return alert("Versão é obrigatória.");
+  
+  // Mark others as not current
+  await supabaseClient.from('product_versions').update({ is_current: false }).eq('product_id', currentVersionProductId);
+  
+  // Insert new
+  await supabaseClient.from('product_versions').insert([{
+    product_id: currentVersionProductId,
+    version,
+    download_url,
+    file_size,
+    changelog,
+    is_current: true
+  }]);
+  
+  // Update parent product download_url as fallback
+  await supabaseClient.from('products').update({ download_url }).eq('id', currentVersionProductId);
+  
+  document.getElementById('v-version').value = '';
+  document.getElementById('v-download').value = '';
+  document.getElementById('v-size').value = '';
+  document.getElementById('v-changelog').value = '';
+  
+  loadVersionsList();
 }
 
 // ==========================================

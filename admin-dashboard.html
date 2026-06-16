@@ -26,6 +26,7 @@
       <li><a href="#" data-target="module-leads">👥 Leads (CRM)</a></li>
       <li><a href="#" data-target="module-funnel">📈 Funil</a></li>
       <li><a href="#" data-target="module-vendas">💰 Vendas</a></li>
+      <li><a href="#" data-target="module-products" style="color: #F59E0B; font-weight: 600;">📦 Produtos</a></li>
       <li><a href="#" data-target="module-campaigns">📢 Campanhas</a></li>
       <li><a href="#" data-target="module-ads">🎯 Meta / Google Ads</a></li>
       <li><a href="#" data-target="module-webhooks">🔌 Webhooks</a></li>
@@ -624,6 +625,188 @@
           .k-score-badge.hot { background: rgba(239,68,68,0.2); color: #ef4444; }
           .kanban-col.drag-over { background: rgba(255,255,255,0.02); border-color: var(--accent); }
         </style>
+      </section>
+
+      <!-- MODULE 12.1: PRODUTOS (CMS) -->
+      <section id="module-products" class="module-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2>📦 Gestão de Produtos (CMS)</h2>
+            <p style="color: var(--text-secondary);">Cadastre sistemas, versões, downloads e bônus.</p>
+          </div>
+          <button class="btn-primary" onclick="window.openProductModal()" style="background: #F59E0B; color: black; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 700; cursor: pointer;">➕ Novo Produto</button>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+          <div class="kpi-card" style="border-top: 3px solid #F59E0B;">
+            <h3 style="font-size: 11px;">Produtos Ativos</h3>
+            <div class="kpi-value" id="kpi-products-active" style="font-size: 24px; color: #F59E0B;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Total de Versões</h3>
+            <div class="kpi-value" id="kpi-products-versions" style="font-size: 24px;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Downloads Totais</h3>
+            <div class="kpi-value" id="kpi-products-downloads" style="font-size: 24px;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Bônus Ativos</h3>
+            <div class="kpi-value" id="kpi-products-bonus" style="font-size: 24px;">0</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Catálogo de Sistemas</h3>
+            <div class="table-filters">
+              <select id="filter-product-status" style="width: 150px;">
+                <option value="all">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+                <option value="bonus">Apenas Bônus</option>
+              </select>
+            </div>
+          </div>
+          <table style="font-size: 13px;">
+            <thead>
+              <tr>
+                <th>Capa</th>
+                <th>Nome / Slug</th>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Carregando catálogo...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- MODAL: PRODUTO -->
+        <div id="modal-product" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <h3 style="font-size: 16px; margin: 0; color: white;" id="modal-product-title">Novo Produto</h3>
+              <button onclick="document.getElementById('modal-product').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Nome do Sistema</label>
+                <input type="text" id="prod-name" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: CRM Imobiliário">
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Slug (Único)</label>
+                <input type="text" id="prod-slug" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: crm-imobiliario">
+              </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Descrição Curta</label>
+              <textarea id="prod-desc" style="width: 100%; height: 60px; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Para que serve este sistema?"></textarea>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Categoria</label>
+                <input type="text" id="prod-cat" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Tipo (Access Type)</label>
+                <select id="prod-type" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                  <option value="core">Sistema Base (Core)</option>
+                  <option value="bonus">Bônus</option>
+                  <option value="upsell">Upsell</option>
+                  <option value="service">Serviço</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Status</label>
+                <select id="prod-status" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                  <option value="active">Ativo</option>
+                  <option value="inactive">Inativo</option>
+                  <option value="draft">Rascunho</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Exige Licença?</label>
+                <select id="prod-license" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              </div>
+              <div>
+                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">É Destaque?</label>
+                <select id="prod-featured" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL da Imagem de Capa (Thumbnail)</label>
+              <input type="text" id="prod-thumb" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+            </div>
+
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL da Aula/Vídeo (Opcional)</label>
+              <input type="text" id="prod-video" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL da Documentação (Opcional)</label>
+              <input type="text" id="prod-doc" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px;">
+              <button onclick="document.getElementById('modal-product').style.display='none'" style="padding: 8px 16px; background: transparent; border: 1px solid var(--border); color: white; border-radius: 4px; cursor: pointer;">Cancelar</button>
+              <button onclick="saveProduct()" style="padding: 8px 16px; background: #F59E0B; border: none; color: black; font-weight: 700; border-radius: 4px; cursor: pointer;">Salvar Produto</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODAL: VERSÕES -->
+        <div id="modal-versions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 700px; max-width: 90%; max-height: 90vh; overflow-y: auto; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <h3 style="font-size: 16px; margin: 0; color: white;">Versões: <span id="v-prod-name" style="color: #F59E0B;"></span></h3>
+              <button onclick="document.getElementById('modal-versions').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px dashed var(--border); margin-bottom: 24px;">
+              <h4 style="margin-bottom: 12px; color: var(--text-secondary); font-size: 13px;">Lançar Nova Versão</h4>
+              <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 12px;">
+                <input type="text" id="v-version" placeholder="Versão (ex: 1.2.0)" style="width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px;">
+                <input type="text" id="v-download" placeholder="URL de Download (S3, Drive, R2)" style="width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px;">
+              </div>
+              <input type="text" id="v-size" placeholder="Tamanho (ex: 24MB)" style="width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px; margin-bottom: 12px;">
+              <textarea id="v-changelog" placeholder="O que há de novo? (Changelog)" style="width: 100%; height: 60px; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px; margin-bottom: 12px;"></textarea>
+              <button onclick="saveVersion()" style="padding: 8px 16px; background: #22C55E; border: none; color: white; font-weight: 700; border-radius: 4px; cursor: pointer;">Publicar Nova Versão</button>
+            </div>
+
+            <table style="font-size: 13px;">
+              <thead>
+                <tr>
+                  <th>Versão</th>
+                  <th>Data</th>
+                  <th>Changelog</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="versions-tbody">
+                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Carregando versões...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </section>
 
       <!-- MODULE 12: AREA DE MEMBROS -->

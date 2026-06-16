@@ -81,6 +81,7 @@ function initRouter() {
       if (target === 'module-systems') await loadSystems();
       if (target === 'module-downloads') await loadDownloads();
       if (target === 'module-licenses') await loadLicenses();
+      if (target === 'module-bonus') await loadBonus();
     });
   });
 
@@ -117,46 +118,62 @@ async function loadSystems() {
   const grid = document.getElementById('systems-grid');
   grid.innerHTML = '<div style="color: var(--text-muted);">Carregando produtos...</div>';
   
-  const { data: products } = await supabaseClient.from('member_products')
-    .select('*')
+  // Buscar os member_products com os detalhes do produto do CMS
+  const { data: memberProducts } = await supabaseClient.from('member_products')
+    .select('*, products(*)')
+    .eq('member_id', currentMemberId)
     .eq('access_granted', true);
     
   grid.innerHTML = '';
   
-  if (!products || products.length === 0) {
+  if (!memberProducts || memberProducts.length === 0) {
     grid.innerHTML = '<div style="color: var(--text-muted);">Nenhum sistema liberado ainda.</div>';
     return;
   }
   
-  products.forEach(p => {
+  memberProducts.forEach(mp => {
+    const p = mp.products;
+    if (!p) return; // Segurança caso o produto não exista no CMS
+    if (p.status !== 'active') return; // Segurança para não mostrar inativos
+    
+    // Se for bônus, não mostra em "Meus Sistemas", a menos que o admin queira. Vamos filtrar os Core
+    if (p.access_type === 'bonus') return;
+
+    const dlUrl = p.download_url || '';
+    const btnHtml = dlUrl 
+      ? `<button class="btn-download" onclick="downloadProduct('${p.id}', '${dlUrl}')">Fazer Download</button>`
+      : `<button class="btn-download" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); cursor: not-allowed;" disabled>Download em preparação</button>`;
+
     const card = document.createElement('div');
     card.className = 'product-card';
     card.innerHTML = `
-      <div class="p-cover">📦</div>
+      <div class="p-cover" style="background-image: url('${p.thumbnail_url}'); background-size: cover; background-position: center;">${p.thumbnail_url ? '' : '📦'}</div>
       <div class="p-body">
-        <div class="p-title">${p.product_name}</div>
+        <div class="p-title">${p.name}</div>
         <div class="p-meta">
-          <span>Versão: ${p.version || '1.0.0'}</span>
-          <span style="color: var(--success);">Ativo</span>
+          <span>Versão Atualizada</span>
+          <span style="color: var(--success); text-transform: uppercase; font-weight: 700;">Ativo</span>
         </div>
-        <button class="btn-download" onclick="downloadProduct('${p.product_name}', '${p.download_url || '#'}')">Fazer Download</button>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; min-height: 36px;">${p.description || 'Nenhuma descrição fornecida.'}</p>
+        ${btnHtml}
       </div>
     `;
     grid.appendChild(card);
   });
 }
 
-window.downloadProduct = async function(productName, url) {
+window.downloadProduct = async function(productId, url) {
   if (!currentMemberId) return;
   try {
+    // Pegar o nome do produto e a versão atual para o log
+    const { data: p } = await supabaseClient.from('products').select('name').eq('id', productId).single();
+    
     await supabaseClient.from('member_downloads').insert([{
       member_id: currentMemberId,
-      product_name: productName,
+      product_id: productId,
+      product_name: p ? p.name : 'Desconhecido',
       user_agent: navigator.userAgent
     }]);
-    
-    // Add engagement points implicitly in background via edge functions, or local increment
-    // Since we can't safely increment without an RPC, we just let it be.
     
     if (url && url !== '#') {
       window.open(url, '_blank');
@@ -220,5 +237,50 @@ async function loadLicenses() {
       <td><button style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; cursor: pointer;" onclick="navigator.clipboard.writeText('${l.license_key}'); alert('Chave copiada!')">Copiar</button></td>
     `;
     tbody.appendChild(tr);
+  });
+}
+
+async function loadBonus() {
+  if (!currentMemberId) return;
+  const grid = document.getElementById('bonus-grid');
+  grid.innerHTML = '<div style="color: var(--text-muted);">Carregando bônus...</div>';
+  
+  // Buscar member_products e filtrar por access_type === 'bonus'
+  const { data: memberProducts } = await supabaseClient.from('member_products')
+    .select('*, products(*)')
+    .eq('member_id', currentMemberId)
+    .eq('access_granted', true);
+    
+  grid.innerHTML = '';
+  
+  if (!memberProducts || memberProducts.length === 0) {
+    grid.innerHTML = '<div style="color: var(--text-muted);">Nenhum bônus liberado ainda.</div>';
+    return;
+  }
+  
+  const bonuses = memberProducts.map(mp => mp.products).filter(p => p && p.status === 'active' && p.access_type === 'bonus');
+  
+  if (bonuses.length === 0) {
+    grid.innerHTML = '<div style="color: var(--text-muted);">Nenhum bônus liberado ainda.</div>';
+    return;
+  }
+  
+  bonuses.forEach(p => {
+    const dlUrl = p.download_url || '';
+    const btnHtml = dlUrl 
+      ? `<button class="btn-download" onclick="downloadProduct('${p.id}', '${dlUrl}')">Baixar Material</button>`
+      : `<button class="btn-download" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); cursor: not-allowed;" disabled>Em preparação</button>`;
+
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.innerHTML = `
+      <div class="p-cover" style="background-image: url('${p.thumbnail_url}'); background-size: cover; background-position: center;">${p.thumbnail_url ? '' : '🎁'}</div>
+      <div class="p-body">
+        <div class="p-title">${p.name}</div>
+        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; min-height: 36px;">${p.description || 'Material Exclusivo'}</p>
+        ${btnHtml}
+      </div>
+    `;
+    grid.appendChild(card);
   });
 }
