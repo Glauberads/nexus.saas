@@ -88,3 +88,26 @@ O projeto utiliza funções backend para envio de dados sigilosos e contorno de 
 ✅ Funil de Upsell ativo e com rastreamento implementado.
 ✅ Recuperação de vendas (Webhook Backend) operante.
 ✅ Todo o código versionado na pasta local.
+
+---
+
+## Fase 2.5: Otimização da Hero e Conversão (Above The Fold)
+Uma atualização focada no ganho de valor imediato, transmitindo ao usuário toda a proposta de valor em menos de 5 segundos.
+
+### Layout em Grid (2 Colunas)
+- O `index.html` foi refatorado para exibir o Mockup do Dashboard Premium ao lado do Copy (em telas maiores), sem precisar rolar a página.
+
+### Elementos de Prova e Segurança
+- **Lista de Benefícios Premium**: Lista com ícones de check logo abaixo da subheadline (30+ sistemas, R$50k+ valor, Código-fonte).
+- **Indicadores Rápidos (Stats)**: Estilização vítrea para exibir estatísticas impactantes antes da dobra (4h para lançar, 100% White Label).
+- **Trust Bar**: Uma barra de segurança abaixo do CTA indicando *Compra Segura*, *Acesso Imediato* e *Licença Comercial*.
+- **Scroll Cue Animado**: Setinha de incentivo de scroll.
+
+### Micro-interações
+- Atualização em `styles.css` para reflexos nos CTAs, glow backgrounds pulsantes no Mockup e responsividade alinhada.
+
+### Tracking e Teste A/B Preparado (`script.js` e `tracking.js`)
+- Lógica base do Teste A/B desenvolvida para sortear a Headline (A/B/C), mas mantida com a flag **Desativada** focando 100% do tráfego na Variante A até atingir maturidade estatística.
+- Integração de `IntersectionObserver` para rastrear: `Hero_View`, `TrustBar_View` e `ValueProof_View`.
+- Listeners de clique nativos para: `Hero_CTA_Click` e `Hero_Secondary_Click`.
+- Tudo sincronizado via GA4 e Meta CAPI.
