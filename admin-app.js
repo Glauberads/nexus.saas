@@ -159,6 +159,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-automations') await loadAutomationsModule();
   else if (moduleId === 'module-whatsapp-crm') await loadWhatsappCrmModule();
   else if (moduleId === 'module-ads') await loadAdsModule();
+  else if (moduleId === 'module-members') await loadMembersModule();
 }
 
 // --- DASHBOARD ---
@@ -1414,6 +1415,72 @@ async function loadAdsModule() {
         <td>${m.impressions || 0}</td>
       `;
       tbodyCamp.appendChild(tr);
+    });
+  }
+}
+
+// ==========================================
+// 12. ÁREA DE MEMBROS
+// ==========================================
+async function loadMembersModule() {
+  if (!supabaseClient) return;
+
+  const dateFilter = getFilterDate();
+  
+  let qMembers = supabaseClient.from('members').select('*');
+  let qProducts = supabaseClient.from('member_products').select('*');
+  let qDownloads = supabaseClient.from('member_downloads').select('*');
+  let qLicenses = supabaseClient.from('member_licenses').select('*');
+
+  if (dateFilter) {
+    qMembers = qMembers.gte('created_at', dateFilter);
+  }
+
+  const [{ data: members }, { data: products }, { data: downloads }, { data: licenses }] = await Promise.all([
+    qMembers, qProducts, qDownloads, qLicenses
+  ]);
+
+  if (!members) return;
+
+  const activeMembers = members.filter(m => m.status === 'active');
+  const onboarded = members.filter(m => m.onboarding_completed);
+  
+  const activationRate = members.length > 0 ? (onboarded.length / members.length) * 100 : 0;
+  
+  document.getElementById('kpi-members-active').textContent = activeMembers.length;
+  document.getElementById('kpi-members-activation').textContent = `${activationRate.toFixed(1)}%`;
+  document.getElementById('kpi-members-downloads').textContent = downloads ? downloads.length : 0;
+  document.getElementById('kpi-members-licenses').textContent = licenses ? licenses.filter(l => l.status === 'active').length : 0;
+  
+  // Simulated MRR based on active members * average price
+  const estimatedMrr = activeMembers.length * 97.00; 
+  document.getElementById('kpi-members-mrr').textContent = `R$ ${estimatedMrr.toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+
+  const tbody = document.getElementById('members-tbody');
+  tbody.innerHTML = '';
+  
+  if (members.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum membro encontrado.</td></tr>';
+  } else {
+    members.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).forEach(m => {
+      const tr = document.createElement('tr');
+      const statusColor = m.status === 'active' ? 'var(--success)' : 'var(--danger)';
+      const lastAccess = m.last_login_at ? new Date(m.last_login_at).toLocaleDateString('pt-BR') : 'Nunca';
+      
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight: 600;">${m.name}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${m.id}</div>
+        </td>
+        <td>${m.email}</td>
+        <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${m.status}</td>
+        <td>${lastAccess}</td>
+        <td><span class="badge ${m.engagement_score > 50 ? 'quente' : 'frio'}">${m.engagement_score} pts</span></td>
+        <td>
+          <button style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; cursor: pointer;" onclick="alert('Funcionalidade em desenvolvimento')">Gerenciar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
   }
 }

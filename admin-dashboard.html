@@ -33,6 +33,7 @@
       <li><a href="#" data-target="module-general-logs" style="color: var(--accent); font-weight: 600;">📜 Logs Gerais</a></li>
       <li><a href="#" data-target="module-automations" style="color: var(--success); font-weight: 600;">🤖 Automações</a></li>
       <li><a href="#" data-target="module-whatsapp-crm" style="color: #25D366; font-weight: 600;">📱 WhatsApp CRM</a></li>
+      <li><a href="#" data-target="module-members" style="color: #8B5CF6; font-weight: 600;">🎓 Área de Membros</a></li>
       <li><a href="#" data-target="module-config">⚙️ Configurações</a></li>
     </ul>
 
@@ -623,6 +624,65 @@
           .k-score-badge.hot { background: rgba(239,68,68,0.2); color: #ef4444; }
           .kanban-col.drag-over { background: rgba(255,255,255,0.02); border-color: var(--accent); }
         </style>
+      </section>
+
+      <!-- MODULE 12: AREA DE MEMBROS -->
+      <section id="module-members" class="module-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <div>
+            <h2>🎓 Área de Membros (Gestão)</h2>
+            <p style="color: var(--text-secondary);">Controle de acessos, downloads, licenças e retenção.</p>
+          </div>
+          <button class="btn-primary" onclick="window.open('cliente-login.html', '_blank')" style="background: #8B5CF6; color: white; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Acessar Portal do Cliente ↗</button>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+          <div class="kpi-card" style="border-top: 3px solid #8B5CF6;">
+            <h3 style="font-size: 11px;">Membros Ativos</h3>
+            <div class="kpi-value" id="kpi-members-active" style="font-size: 24px; color: #8B5CF6;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Taxa de Ativação</h3>
+            <div class="kpi-value" id="kpi-members-activation" style="font-size: 24px;">0%</div>
+            <div class="kpi-trend" style="color: var(--text-muted); font-size: 10px;">Completaram Onboarding</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Downloads</h3>
+            <div class="kpi-value" id="kpi-members-downloads" style="font-size: 24px;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Licenças Ativas</h3>
+            <div class="kpi-value" id="kpi-members-licenses" style="font-size: 24px;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">MRR / Receita</h3>
+            <div class="kpi-value" id="kpi-members-mrr" style="font-size: 24px; color: var(--success);">R$ 0</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Gestão de Acessos</h3>
+            <div class="table-filters">
+              <input type="text" id="search-members" placeholder="Buscar por nome ou email..." style="width: 250px;">
+            </div>
+          </div>
+          <table style="font-size: 13px;">
+            <thead>
+              <tr>
+                <th>Membro</th>
+                <th>Contato</th>
+                <th>Status</th>
+                <th>Último Acesso</th>
+                <th>Score</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="members-tbody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Carregando membros...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section id="module-config" class="module-section"><h2>Configurações do Sistema</h2><p style="color: var(--text-muted)">Ajustes de Pixel, GA4 e Edge Functions.</p></section>
