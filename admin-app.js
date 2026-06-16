@@ -1695,14 +1695,16 @@ window.openProductModal = function() {
   document.getElementById('modal-product-title').textContent = 'Novo Produto';
   
   // Clear fields
-  ['prod-name', 'prod-slug', 'prod-desc', 'prod-cat', 'prod-thumb', 'prod-video', 'prod-doc', 'prod-price', 'prod-sale-price', 'prod-thank-you', 'prod-sales-page'].forEach(id => {
+  ['prod-name', 'prod-slug', 'prod-desc', 'prod-cat', 'prod-thumb', 'prod-video', 'prod-doc', 'prod-price', 'prod-sale-price', 'prod-pix-discount', 'prod-max-installments', 'prod-thank-you', 'prod-sales-page'].forEach(id => {
     if(document.getElementById(id)) document.getElementById(id).value = '';
   });
-  document.getElementById('prod-type').value = 'core';
-  document.getElementById('prod-status').value = 'active';
-  document.getElementById('prod-license').value = 'true';
-  document.getElementById('prod-featured').value = 'false';
+  
+  if(document.getElementById('prod-type')) document.getElementById('prod-type').value = 'core';
+  if(document.getElementById('prod-status')) document.getElementById('prod-status').value = 'active';
+  if(document.getElementById('prod-license')) document.getElementById('prod-license').value = 'true';
+  if(document.getElementById('prod-featured')) document.getElementById('prod-featured').value = 'false';
   if(document.getElementById('prod-checkout-enabled')) document.getElementById('prod-checkout-enabled').value = 'true';
+  if(document.getElementById('prod-max-installments')) document.getElementById('prod-max-installments').value = '12';
   
   document.getElementById('modal-product').style.display = 'flex';
 }
