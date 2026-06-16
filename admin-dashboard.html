@@ -800,7 +800,7 @@
 
         <!-- MODAL: GATEWAY SETTINGS -->
         <div id="modal-gateway-settings" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 500px; max-width: 90%; padding: 24px;">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 500px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
               <h3 style="font-size: 16px; margin: 0; color: white;" id="modal-gateway-title">Configurar Gateway</h3>
               <button onclick="document.getElementById('modal-gateway-settings').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
@@ -845,7 +845,7 @@
         <!-- MODALS ANTIGOS DE PRODUTOS MOVIDOS PARA CÁ -->
         <!-- MODAL: PRODUTO -->
         <div id="modal-product" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; padding: 24px;">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 600px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; max-height: 90vh; overflow-y: auto; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
               <h3 style="font-size: 16px; margin: 0; color: white;" id="modal-product-title">Novo Produto</h3>
               <button onclick="document.getElementById('modal-product').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
@@ -946,7 +946,7 @@
 
         <!-- MODAL: VERSÕES -->
         <div id="modal-versions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 700px; max-width: 90%; max-height: 90vh; overflow-y: auto; padding: 24px;">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 700px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; max-height: 90vh; overflow-y: auto; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
               <h3 style="font-size: 16px; margin: 0; color: white;">Gerenciar Versões: <span id="v-prod-name" style="color: #8B5CF6;"></span></h3>
               <button onclick="document.getElementById('modal-versions').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
@@ -981,7 +981,7 @@
 
         <!-- MODAL RÁPIDO: ALTERAR PREÇO -->
         <div id="modal-quick-price" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 400px; max-width: 90%; padding: 24px;">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 400px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
               <h3 style="font-size: 16px; margin: 0; color: white;">💰 Alterar Preço</h3>
               <button onclick="document.getElementById('modal-quick-price').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>

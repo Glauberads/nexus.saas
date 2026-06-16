@@ -42,13 +42,18 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--bg-main);
   color: var(--text-primary);
   display: flex;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 /* =============================================
@@ -255,7 +260,7 @@ h3 { font-size: 14px; color: var(--text-secondary); text-transform: uppercase; l
   border-color: var(--border-focus);
 }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; white-space: nowrap; max-width: 100%; }
 th {
   padding: 16px 24px;
   text-align: left;
