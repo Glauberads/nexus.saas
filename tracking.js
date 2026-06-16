@@ -289,7 +289,7 @@
       this._logEvent(eventName, allParams, eventId);
 
       // CAPI (for key events)
-      const capiEvents = ['ViewContent','Lead','InitiateCheckout','Purchase','QualifiedLead','ReadyToBuy','VideoComplete'];
+      const capiEvents = ['ViewContent','Lead','InitiateCheckout','Purchase','QualifiedLead','ReadyToBuy','VideoComplete','Hero_CTA_Click','Hero_Secondary_Click'];
       if (capiEvents.includes(eventName)) {
         this._sendCAPI(eventName, params, eventId);
       }
@@ -332,6 +332,12 @@
         QualifiedLead: 'qualified_lead',
         ReadyToBuy: 'ready_to_buy',
         QuizComplete: 'quiz_complete',
+        Hero_View: 'hero_view',
+        Hero_CTA_Click: 'hero_cta_click',
+        Hero_Secondary_Click: 'hero_secondary_click',
+        Hero_Scroll: 'hero_scroll',
+        TrustBar_View: 'trustbar_view',
+        ValueProof_View: 'valueproof_view',
       };
 
       const ga4EventName = ga4Map[eventName] || eventName.toLowerCase().replace(/([A-Z])/g, '_$1').slice(1);

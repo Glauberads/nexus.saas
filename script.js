@@ -619,14 +619,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // === A/B TEST INIT ===
-  if (window.NexusABTest) {
-    // Example: Teste de Headline no Hero
-    const headlineVariant = window.NexusABTest.define('hero_headline', ['variant_a', 'variant_b'], [50, 50]);
-    if (headlineVariant === 'variant_b') {
-      const h1 = document.querySelector('.hero-headline');
-      if (h1) h1.innerHTML = 'O Atalho Definitivo Para<br /><span class="highlight">O Seu Próximo SaaS.</span>';
+  // Preparado para testes futuros (Desativado por padrão)
+  const enableABTest = false;
+  if (window.NexusABTest && enableABTest) {
+    const headlineVariant = window.NexusABTest.define('hero_headline', ['variant_a', 'variant_b', 'variant_c'], [34, 33, 33]);
+    const h1 = document.getElementById('ab-headline');
+    if (h1) {
+      if (headlineVariant === 'variant_b') {
+        h1.innerHTML = 'Pare de Desenvolver<br /><span class="highlight">Do Zero.</span>';
+      } else if (headlineVariant === 'variant_c') {
+        h1.innerHTML = 'Mais de 30 Sistemas SaaS<br /><span class="highlight">Prontos Para Monetizar.</span>';
+      }
     }
   }
+
+  // === TRACKING LISTENERS PARA HERO ===
+  const trackElements = document.querySelectorAll('[data-tracking]');
+  
+  // 1. Click Listeners
+  trackElements.forEach(el => {
+    el.addEventListener('click', () => {
+       const eventName = el.getAttribute('data-tracking');
+       if (eventName.includes('Click') || eventName.includes('Scroll')) {
+          if (window.NexusTracker) window.NexusTracker.track(eventName);
+       }
+    });
+  });
+
+  // 2. View Listeners (Intersection Observer)
+  const viewObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const eventName = entry.target.getAttribute('data-tracking');
+        if (eventName && eventName.includes('View')) {
+          if (window.NexusTracker) window.NexusTracker.track(eventName);
+          viewObserver.unobserve(entry.target); // Trigger once
+        }
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('[data-tracking$="View"]').forEach(el => {
+    viewObserver.observe(el);
+  });
 
   console.log('%c NexusSaaS 🚀 ', 'background:#FF6B00;color:#fff;font-size:16px;font-weight:bold;padding:8px 16px;border-radius:8px;');
 });
