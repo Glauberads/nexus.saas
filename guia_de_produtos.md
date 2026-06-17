@@ -63,4 +63,5 @@ Toda vez que uma compra é iniciada com a aba **Central Financeira** operante, o
 - [ ] Desconto PIX e Max Parcelas ajustados para a oferta.
 - [ ] Status definido como "Ativo".
 - [ ] Gateway (Asaas) devidamente configurado, verde e testado na aba "Gateways".
+- [ ] **Chave PIX Exclusiva Gerada no Asaas:** Certifique-se de acessar `Minha Conta > Chaves Pix` no Asaas e criar uma chave aleatória. Se isso não for feito, a API recusará cobranças via PIX com o erro *invalid_billingType*.
 - [ ] Webhook do Asaas ativado e enviando eventos para a Edge Function do sistema.

@@ -143,3 +143,46 @@ Prevenção pesada contra extração de dados públicos (scrapping). O Supabase 
 - O tráfego anônimo da Landing Page que usa o `SUPABASE_ANON_KEY` só tem permissões ativas para executar `INSERT` nas tabelas. Ler ou apagar dados retorna `Erro 401`.
 - A função auxiliar PostgreSQL `is_admin()` verifica matematicamente as *claims* do JWT da requisição em busca do email aprovado. Se for legítimo, as restrições caem, garantindo segurança hermética do painel.
 - Tudo sincronizado via GA4 e Meta CAPI.
+
+---
+
+## Fase 8: Checkout Customizado (Front-end Integrado)
+Criação de um sistema de checkout próprio (`checkout.html`) que abandona a dependência de plataformas externas (como Hotmart) para exibição do carrinho.
+- **Carrinho Local:** Script local capaz de buscar os produtos e upsells na base do Supabase e renderizar dinamicamente.
+- **Cálculo em Tempo Real:** Atualização de totais, juros de parcelamento e descontos de PIX via JavaScript sem recarregar a página.
+
+---
+
+## Fase 9: Área de Membros (Cliente)
+Desenvolvimento do portal do aluno/cliente (`cliente-login.html` e `cliente-dashboard.html`).
+- **Autenticação Segura:** Login protegido via Supabase Auth.
+- **Painel de Acesso:** Interface onde o cliente visualiza suas assinaturas ativas, links de documentação e status de pagamento de forma fluida e responsiva.
+
+---
+
+## Fase 10: Componentes Avançados e Modais
+Polimento estético de componentes-chave do sistema.
+- **Modais Nativos:** Padronização dos pop-ups (Quiz, Exit Intent, Gateways) garantindo acessibilidade e experiência de usuário premium em mobile e desktop.
+- **Aprimoramento Visual:** Adição de micro-animações, *glow effects* e responsividade ajustada para tabelas de comparação.
+
+---
+
+## Fase 11: Reformulação de Produtos e Ofertas
+Estruturação da interface de produtos no painel administrativo.
+- **CRUD Completo:** Permite criar, editar e configurar detalhes vitais dos produtos (Preço, Slug, Capa, Desconto PIX, Max de Parcelas).
+- **Integração Total:** Conectividade direta entre os produtos do banco de dados e a leitura dinâmica feita pelo Checkout.
+
+---
+
+## Fase 12: Arquitetura Enterprise Multi-Gateway (Integração Asaas)
+Uma das fases mais críticas, centralizando a inteligência financeira e segurança de cobranças.
+- **Tabelas Dedicadas:** Criação de `gateway_settings`, `asaas_customers`, `asaas_payments` garantindo rastreabilidade financeira 100%.
+- **Edge Functions Seguras:** Função `asaas-create-payment` que processa a geração de PIX e Boletos de forma invisível. O front-end nunca toca nas chaves da API.
+- **Tratamento de PIX e Boletos:** Geração instantânea de QR Code dinâmico do Asaas diretamente na interface do Checkout. (Observação vital: O lojista deve gerar ativamente uma chave PIX dentro do Asaas para liberar as cobranças, evitando o erro `invalid_billingType`).
+
+---
+
+## Fase 13: Auditoria Rigorosa Mobile (Overflow Horizontal)
+Resolução de problemas crônicos de responsividade onde o layout "vazava" na tela do celular (overflow horizontal).
+- **Tabelas Deslizantes:** `overflow-x: auto` e `min-width` aplicado na tabela de comparação.
+- **Padding e Box-Sizing Agressivo:** Bloqueio estrito no formulário do Lead Magnet e Modais para forçar componentes a respeitarem a margem de segurança de telas até 320px, permitindo quebra de texto em botões gigantes.

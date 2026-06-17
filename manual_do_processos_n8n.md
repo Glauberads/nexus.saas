@@ -72,7 +72,7 @@ Disparado quando o Lead tenta comprar, mas o banco de dados confirma que a compr
 ```
 
 ### 🚀 Venda Aprovada (`purchase_onboarding`)
-Disparado assim que a Kiwify/Hotmart acusa pagamento aprovado.
+Disparado assim que o Gateway de Pagamento nativo (Asaas) ou externo acusa o pagamento como aprovado (PIX pago ou Cartão aprovado).
 
 ```json
 {
@@ -82,7 +82,7 @@ Disparado assim que a Kiwify/Hotmart acusa pagamento aprovado.
   "email": "carlos.m@email.com",
   "amount": 497,
   "product_name": "NexusSaaS Pro",
-  "order_id": "ORD-982183",
+  "order_id": "pay_982183",
   "is_test": false
 }
 ```
