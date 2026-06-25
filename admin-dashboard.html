@@ -934,10 +934,64 @@
                 </div>
               </div>
 
-              <!-- NOVA FAIXA: VIDEO DO UPSELL -->
-              <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vídeo do Upsell (URL do YouTube/Vimeo - Opcional)</label>
-                <input type="text" id="prod-upsell-video" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://www.youtube.com/embed/...">
+              <!-- BLOCO: CONFIGURAÇÕES DE UPSELL (PÁGINA DE OBRIGADO) -->
+              <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <h3 style="font-size: 14px; margin-bottom: 16px; color: var(--accent);">Configurações de Upsell (Página de Obrigado)</h3>
+                
+                <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="prod-upsell-enabled" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                  <label for="prod-upsell-enabled" style="font-size: 14px; color: var(--text-primary); cursor: pointer;">Ativar Upsell dinâmico na página de obrigado</label>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Título Principal do Upsell</label>
+                    <input type="text" id="prod-upsell-title" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: Deseja pular a parte técnica?">
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Link de Compra do Upsell (Externo ou Interno)</label>
+                    <input type="text" id="prod-upsell-link" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://checkout.kiwify... ou checkout.html?product=...">
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Descrição Curta</label>
+                  <input type="text" id="prod-upsell-desc" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: Adicione nossa Instalação Profissional por apenas...">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Antigo (Ancoragem)</label>
+                    <input type="text" id="prod-upsell-old-price" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: R$ 1.500">
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Atual</label>
+                    <input type="text" id="prod-upsell-new-price" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: R$ 297">
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Benefícios (Uma linha por benefício)</label>
+                  <textarea id="prod-upsell-benefits" rows="4" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px; resize: vertical;" placeholder="Configuração de DNS\nIntegração de Pagamento\n..."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vídeo do Upsell (URL do YouTube/Vimeo)</label>
+                    <input type="text" id="prod-upsell-video" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://www.youtube.com/watch?v=...">
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Imagem do Upsell (URL ou Upload)</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="text" id="prod-upsell-image" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://meusite.com/img.png">
+                      <label for="prod-upsell-image-file" style="background: #10B981; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; white-space: nowrap; margin: 0;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Upload
+                      </label>
+                      <input type="file" id="prod-upsell-image-file" accept="image/*" style="display: none;" onchange="window.uploadUpsellImage(this)">
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 

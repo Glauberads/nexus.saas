@@ -1732,27 +1732,58 @@ window.uploadProductImage = async function(input) {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `covers/${fileName}`;
     
-    // We assume a bucket called 'public' or 'products' or 'images'.
-    // If 'images' bucket doesn't exist, this will throw an error to the user,
-    // which they will need to create in the Supabase Dashboard.
     const { data, error } = await supabaseClient.storage.from('images').upload(filePath, file, { upsert: true });
     
     if (error) {
       alert("Erro ao subir imagem: " + error.message + "\n\nSe o bucket 'images' não existir, crie um bucket público com esse nome no painel do Supabase Storage.");
+      btnLabel.innerHTML = originalText;
       return;
     }
     
     const { data: publicUrlData } = supabaseClient.storage.from('images').getPublicUrl(filePath);
     
+    // Atualiza o input com a URL pública
     document.getElementById('prod-thumb').value = publicUrlData.publicUrl;
     document.getElementById('prod-thumb-status').style.display = 'block';
     
+    input.value = ''; // reseta
+    btnLabel.innerHTML = originalText;
   } catch (err) {
     console.error(err);
     alert('Erro inesperado no upload.');
-  } finally {
+    btnLabel.innerHTML = originalText;
+  }
+}
+
+window.uploadUpsellImage = async function(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const btnLabel = input.previousElementSibling;
+  const originalText = btnLabel.innerHTML;
+  btnLabel.innerHTML = 'Enviando...';
+  
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-upsell-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `upsells/${fileName}`;
+    
+    const { data, error } = await supabaseClient.storage.from('images').upload(filePath, file, { upsert: true });
+    
+    if (error) {
+      alert("Erro ao subir imagem de upsell: " + error.message);
+      btnLabel.innerHTML = originalText;
+      return;
+    }
+    
+    const { data: publicUrlData } = supabaseClient.storage.from('images').getPublicUrl(filePath);
+    
+    document.getElementById('prod-upsell-image').value = publicUrlData.publicUrl;
     btnLabel.innerHTML = originalText;
     input.value = ''; // reseta
+  } catch (err) {
+    alert("Erro interno: " + err.message);
+    btnLabel.innerHTML = originalText;
   }
 }
 
@@ -1782,7 +1813,18 @@ window.editProduct = async function(id) {
     if(document.getElementById('prod-checkout-enabled')) document.getElementById('prod-checkout-enabled').value = p.checkout_enabled ? 'true' : 'false';
     if(document.getElementById('prod-pix-discount')) document.getElementById('prod-pix-discount').value = p.pix_discount || '';
     if(document.getElementById('prod-max-installments')) document.getElementById('prod-max-installments').value = p.max_installments || 12;
-    if(document.getElementById('prod-upsell-video')) document.getElementById('prod-upsell-video').value = p.checkout_config?.upsell_video_url || '';
+    
+    // Upsell Config
+    const uc = p.checkout_config || {};
+    if(document.getElementById('prod-upsell-enabled')) document.getElementById('prod-upsell-enabled').checked = !!uc.upsell_enabled;
+    if(document.getElementById('prod-upsell-title')) document.getElementById('prod-upsell-title').value = uc.upsell_title || '';
+    if(document.getElementById('prod-upsell-link')) document.getElementById('prod-upsell-link').value = uc.upsell_link || '';
+    if(document.getElementById('prod-upsell-desc')) document.getElementById('prod-upsell-desc').value = uc.upsell_desc || '';
+    if(document.getElementById('prod-upsell-old-price')) document.getElementById('prod-upsell-old-price').value = uc.upsell_old_price || '';
+    if(document.getElementById('prod-upsell-new-price')) document.getElementById('prod-upsell-new-price').value = uc.upsell_new_price || '';
+    if(document.getElementById('prod-upsell-benefits')) document.getElementById('prod-upsell-benefits').value = (uc.upsell_benefits || []).join('\n');
+    if(document.getElementById('prod-upsell-video')) document.getElementById('prod-upsell-video').value = uc.upsell_video_url || '';
+    if(document.getElementById('prod-upsell-image')) document.getElementById('prod-upsell-image').value = uc.upsell_image_url || '';
 
     document.getElementById('modal-product').style.display = 'flex';
   }
@@ -1814,10 +1856,22 @@ window.saveProduct = async function() {
   if(document.getElementById('prod-pix-discount')) payload.pix_discount = parseFloat(getVal('prod-pix-discount', '0') || 0);
   if(document.getElementById('prod-max-installments')) payload.max_installments = parseInt(getVal('prod-max-installments', '12') || 12);
   
-  // Atualizar checkout_config com o vídeo do upsell
-  if(document.getElementById('prod-upsell-video')) {
-    payload.checkout_config = { upsell_video_url: getVal('prod-upsell-video') };
-  }
+  // Atualizar checkout_config com os dados do Upsell
+  const upsellEnabled = document.getElementById('prod-upsell-enabled') ? document.getElementById('prod-upsell-enabled').checked : false;
+  const benefitsText = getVal('prod-upsell-benefits', '');
+  const benefitsArray = benefitsText.split('\n').map(b => b.trim()).filter(b => b.length > 0);
+
+  payload.checkout_config = {
+    upsell_enabled: upsellEnabled,
+    upsell_title: getVal('prod-upsell-title'),
+    upsell_link: getVal('prod-upsell-link'),
+    upsell_desc: getVal('prod-upsell-desc'),
+    upsell_old_price: getVal('prod-upsell-old-price'),
+    upsell_new_price: getVal('prod-upsell-new-price'),
+    upsell_benefits: benefitsArray,
+    upsell_video_url: getVal('prod-upsell-video'),
+    upsell_image_url: getVal('prod-upsell-image')
+  };
 
   if (!payload.name || !payload.slug) {
     alert("Nome e Slug são obrigatórios.");

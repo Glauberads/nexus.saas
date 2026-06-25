@@ -182,12 +182,12 @@
     <!-- ÁREA DO UPSELL -->
     <div class="upsell-box" id="upsell-box" style="display: none;">
       <span class="upsell-badge">Atenção: Não feche esta página</span>
-      <h2>Sua jornada está quase completa.<br><span>Deseja pular a parte técnica?</span></h2>
-      <p class="upsell-desc">Adicione a nossa <strong>Instalação "Done For You"</strong> e tenha a sua plataforma e área de membros configurada e rodando em até 24h, sem tocar em 1 linha de código.</p>
+      <h2 id="upsell-title-el">Sua jornada está quase completa.<br><span>Deseja pular a parte técnica?</span></h2>
+      <p class="upsell-desc" id="upsell-desc-el">Adicione a nossa <strong>Instalação "Done For You"</strong> e tenha a sua plataforma e área de membros configurada e rodando em até 24h, sem tocar em 1 linha de código.</p>
 
 
 
-      <ul class="upsell-benefits">
+      <ul class="upsell-benefits" id="upsell-benefits-el">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Configuração completa do seu Domínio Personalizado</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Integração ativa com seu Gateway de Pagamento</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Configuração de E-mails Automáticos</li>
@@ -195,8 +195,8 @@
       </ul>
 
       <div class="price-wrap">
-        <span class="price-old">R$ 1.500</span>
-        <span class="price-new">R$ 297</span>
+        <span class="price-old" id="upsell-price-old-el">R$ 1.500</span>
+        <span class="price-new" id="upsell-price-new-el">R$ 297</span>
       </div>
 
       <a href="checkout.html?product=instalacao-pro" class="btn-upsell" id="btn-accept-upsell">SIM! Adicionar Instalação Profissional</a>
@@ -228,13 +228,11 @@
             <ul>
               <li><span class="step-num">01.</span> <div>Enviamos as instruções e credenciais de acesso para o seu e-mail.</div></li>
               <li><span class="step-num">02.</span> <div>Você já pode acessar o Portal do Cliente e baixar os seus sistemas.</div></li>
-              <li><span class="step-num">03.</span> <div>Caso não encontre o e-mail, verifique a caixa de Spam.</div></li>
+              <li><span class="step-num">03.</span> <div>Qualquer dúvida, nossa equipe de suporte está pronta para ajudar.</div></li>
             </ul>
           </div>
           <a href="cliente-login.html" class="btn-outline">Acessar Área de Membros</a>
         `;
-        
-        upsellBox.style.display = 'block';
         
       } else if (status === 'pending') {
         card.innerHTML = `
@@ -251,7 +249,6 @@
             </ul>
           </div>
         `;
-        upsellBox.style.display = 'block';
       } else {
         card.innerHTML = `
           <div class="icon-wrapper icon-success">✓</div>
@@ -261,42 +258,99 @@
         `;
       }
 
-      // 2. TRACKING DO UPSELL
-      if (window.NexusTracker && upsellBox.style.display === 'block') {
-        window.NexusTracker.trackEvent('Upsell_View', { offer: 'Instalação DFY', value: 297 });
-        
-        // Fetch do Vídeo do Upsell do Dashboard
-        const productSlug = urlParams.get('product');
-        if (productSlug && window.supabaseClient) {
-          window.supabaseClient.from('products').select('checkout_config').eq('checkout_slug', productSlug).single()
-            .then(({ data }) => {
-              if (data && data.checkout_config && data.checkout_config.upsell_video_url) {
-                let videoUrl = data.checkout_config.upsell_video_url;
+      // 2. FETCH DO UPSELL DINÂMICO
+      const productSlug = urlParams.get('product');
+      if (productSlug && window.supabaseClient) {
+        window.supabaseClient.from('products').select('name, checkout_config').eq('checkout_slug', productSlug).single()
+          .then(({ data }) => {
+            if (data && data.checkout_config && data.checkout_config.upsell_enabled) {
+              const uc = data.checkout_config;
+              
+              // Validação de segurança no frontend
+              if (!uc.upsell_title || !uc.upsell_new_price || !uc.upsell_link) return;
+
+              // Se o status for de sucesso ou pendente, mostramos
+              if (status === 'paid' || status === 'pending') {
+                document.getElementById('upsell-title-el').innerHTML = uc.upsell_title;
                 
-                // Conversão simples para embed se for youtube
-                if (videoUrl.includes('youtube.com/watch?v=')) {
-                  videoUrl = videoUrl.replace('watch?v=', 'embed/');
-                } else if (videoUrl.includes('youtu.be/')) {
-                  videoUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
+                if (uc.upsell_desc) {
+                  document.getElementById('upsell-desc-el').innerHTML = uc.upsell_desc;
+                } else {
+                  document.getElementById('upsell-desc-el').style.display = 'none';
                 }
 
-                const videoHtml = `
-                  <div class="video-placeholder" style="border:none; padding:0; background:transparent;">
-                    <iframe src="${videoUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="border-radius:12px;"></iframe>
-                  </div>
-                `;
-                const ul = upsellBox.querySelector('.upsell-benefits');
-                if (ul) ul.insertAdjacentHTML('beforebegin', videoHtml);
+                if (uc.upsell_old_price) {
+                  document.getElementById('upsell-price-old-el').innerText = uc.upsell_old_price;
+                } else {
+                  document.getElementById('upsell-price-old-el').style.display = 'none';
+                }
+                
+                document.getElementById('upsell-price-new-el').innerText = uc.upsell_new_price;
+
+                const btnAccept = document.getElementById('btn-accept-upsell');
+                btnAccept.href = uc.upsell_link;
+                btnAccept.innerText = 'SIM! Quero Adicionar Agora';
+                
+                // Dataset para tracking
+                btnAccept.dataset.offer = uc.upsell_title;
+                btnAccept.dataset.value = uc.upsell_new_price;
+                btnAccept.dataset.mainProduct = data.name;
+
+                if (uc.upsell_benefits && uc.upsell_benefits.length > 0) {
+                  const ul = document.getElementById('upsell-benefits-el');
+                  ul.innerHTML = '';
+                  uc.upsell_benefits.forEach(benefit => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> ${benefit}`;
+                    ul.appendChild(li);
+                  });
+                }
+
+                if (uc.upsell_video_url) {
+                  let videoUrl = uc.upsell_video_url;
+                  if (videoUrl.includes('youtube.com/watch?v=')) {
+                    videoUrl = videoUrl.replace('watch?v=', 'embed/');
+                  } else if (videoUrl.includes('youtu.be/')) {
+                    videoUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
+                  }
+                  const videoHtml = `
+                    <div class="video-placeholder" style="border:none; padding:0; background:transparent;">
+                      <iframe src="${videoUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="border-radius:12px;"></iframe>
+                    </div>
+                  `;
+                  document.getElementById('upsell-benefits-el').insertAdjacentHTML('beforebegin', videoHtml);
+                } else if (uc.upsell_image_url) {
+                  const imageHtml = `
+                    <div style="margin-bottom: 24px; text-align: center;">
+                      <img src="${uc.upsell_image_url}" alt="Upsell Image" style="max-width: 100%; border-radius: 12px; border: 1px solid var(--border);">
+                    </div>
+                  `;
+                  document.getElementById('upsell-benefits-el').insertAdjacentHTML('beforebegin', imageHtml);
+                }
+
+                // Revelar bloco
+                upsellBox.style.display = 'block';
+                
+                // Track View
+                if (window.NexusTracker) {
+                  window.NexusTracker.trackEvent('Upsell_View', { offer: uc.upsell_title, value: uc.upsell_new_price });
+                }
               }
-            }).catch(e => console.log('Erro ao carregar video', e));
-        }
+            }
+          }).catch(e => console.log('Erro ao carregar upsell dinâmico', e));
       }
 
+      // 3. TRACKING DE CLIQUES
       const btnAccept = document.getElementById('btn-accept-upsell');
       if (btnAccept) {
-        btnAccept.addEventListener('click', () => {
+        btnAccept.addEventListener('click', (e) => {
           if (window.NexusTracker) {
-            window.NexusTracker.trackEvent('Upsell_Click', { offer: 'Instalação DFY', action: 'accept' });
+            window.NexusTracker.trackEvent('Upsell_Click', { 
+              main_product: btnAccept.dataset.mainProduct || 'Produto Desconhecido',
+              offer: btnAccept.dataset.offer || 'Instalação DFY',
+              value: btnAccept.dataset.value || '297',
+              link: btnAccept.href
+            });
           }
         });
       }
