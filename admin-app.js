@@ -1826,6 +1826,13 @@ window.editProduct = async function(id) {
     if(document.getElementById('prod-upsell-video')) document.getElementById('prod-upsell-video').value = uc.upsell_video_url || '';
     if(document.getElementById('prod-upsell-image')) document.getElementById('prod-upsell-image').value = uc.upsell_image_url || '';
 
+    // Split Config
+    const sc = uc.split || {};
+    if(document.getElementById('prod-split-enabled')) document.getElementById('prod-split-enabled').checked = !!sc.enabled;
+    if(document.getElementById('prod-split-wallet')) document.getElementById('prod-split-wallet').value = sc.walletId || '';
+    if(document.getElementById('prod-split-type')) document.getElementById('prod-split-type').value = sc.type || 'percentage';
+    if(document.getElementById('prod-split-value')) document.getElementById('prod-split-value').value = sc.value || '';
+
     document.getElementById('modal-product').style.display = 'flex';
   }
 }
@@ -1856,11 +1863,13 @@ window.saveProduct = async function() {
   if(document.getElementById('prod-pix-discount')) payload.pix_discount = parseFloat(getVal('prod-pix-discount', '0') || 0);
   if(document.getElementById('prod-max-installments')) payload.max_installments = parseInt(getVal('prod-max-installments', '12') || 12);
   
-  // Atualizar checkout_config com os dados do Upsell
+  // Atualizar checkout_config com os dados do Upsell e Split
   const upsellEnabled = document.getElementById('prod-upsell-enabled') ? document.getElementById('prod-upsell-enabled').checked : false;
   const benefitsText = getVal('prod-upsell-benefits', '');
   const benefitsArray = benefitsText.split('\n').map(b => b.trim()).filter(b => b.length > 0);
 
+  const splitEnabled = document.getElementById('prod-split-enabled') ? document.getElementById('prod-split-enabled').checked : false;
+  
   payload.checkout_config = {
     upsell_enabled: upsellEnabled,
     upsell_title: getVal('prod-upsell-title'),
@@ -1870,7 +1879,13 @@ window.saveProduct = async function() {
     upsell_new_price: getVal('prod-upsell-new-price'),
     upsell_benefits: benefitsArray,
     upsell_video_url: getVal('prod-upsell-video'),
-    upsell_image_url: getVal('prod-upsell-image')
+    upsell_image_url: getVal('prod-upsell-image'),
+    split: {
+      enabled: splitEnabled,
+      walletId: getVal('prod-split-wallet'),
+      type: getVal('prod-split-type', 'percentage'),
+      value: parseFloat(getVal('prod-split-value', '0') || 0)
+    }
   };
 
   if (!payload.name || !payload.slug) {

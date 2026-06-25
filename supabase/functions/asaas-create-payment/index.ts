@@ -122,6 +122,28 @@ serve(async (req) => {
        // but assuming standard payment payload handles basic fields.
     }
 
+    // Handle Split
+    const splitConfig = product.checkout_config?.split;
+    if (splitConfig && splitConfig.enabled) {
+      if (!splitConfig.walletId || typeof splitConfig.value !== 'number' || splitConfig.value <= 0) {
+        throw new Error('Configuração de split inválida: walletId e valor numérico maior que zero são obrigatórios.');
+      }
+      
+      const splitObj: any = {
+        walletId: splitConfig.walletId
+      };
+      
+      if (splitConfig.type === 'percentage') {
+        splitObj.percentualValue = splitConfig.value;
+      } else if (splitConfig.type === 'fixed') {
+        splitObj.fixedValue = splitConfig.value;
+      } else {
+         throw new Error('Configuração de split inválida: tipo de repasse desconhecido.');
+      }
+      
+      paymentPayload.split = [splitObj];
+    }
+
     const payRes = await fetch(`${baseUrl}/payments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'access_token': asaasKey },
