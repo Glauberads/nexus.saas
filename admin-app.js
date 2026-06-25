@@ -1787,6 +1787,38 @@ window.uploadUpsellImage = async function(input) {
   }
 }
 
+window.addSplitRow = function(walletId = '', type = 'percentage', value = '') {
+  const container = document.getElementById('split-receivers-container');
+  const div = document.createElement('div');
+  div.className = 'split-row';
+  div.style.display = 'grid';
+  div.style.gridTemplateColumns = '2fr 1fr 1fr auto';
+  div.style.gap = '8px';
+  div.style.alignItems = 'end';
+  
+  div.innerHTML = `
+    <div>
+      <label style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 2px;">Wallet ID</label>
+      <input type="text" class="split-wallet-input" value="${walletId}" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: c8ed23a1...">
+    </div>
+    <div>
+      <label style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 2px;">Tipo</label>
+      <select class="split-type-input" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+        <option value="percentage" ${type === 'percentage' ? 'selected' : ''}>%</option>
+        <option value="fixed" ${type === 'fixed' ? 'selected' : ''}>R$</option>
+      </select>
+    </div>
+    <div>
+      <label style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 2px;">Valor</label>
+      <input type="number" step="0.01" class="split-value-input" value="${value}" style="width: 100%; padding: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="0.00">
+    </div>
+    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 6px; border-radius: 4px; cursor: pointer; height: 31px; display: flex; align-items: center; justify-content: center;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+    </button>
+  `;
+  if (container) container.appendChild(div);
+};
+
 window.editProduct = async function(id) {
   currentEditingProductId = id;
   document.getElementById('modal-product-title').textContent = 'Editar Produto';
@@ -1827,11 +1859,24 @@ window.editProduct = async function(id) {
     if(document.getElementById('prod-upsell-image')) document.getElementById('prod-upsell-image').value = uc.upsell_image_url || '';
 
     // Split Config
-    const sc = uc.split || {};
-    if(document.getElementById('prod-split-enabled')) document.getElementById('prod-split-enabled').checked = !!sc.enabled;
-    if(document.getElementById('prod-split-wallet')) document.getElementById('prod-split-wallet').value = sc.walletId || '';
-    if(document.getElementById('prod-split-type')) document.getElementById('prod-split-type').value = sc.type || 'percentage';
-    if(document.getElementById('prod-split-value')) document.getElementById('prod-split-value').value = sc.value || '';
+    const container = document.getElementById('split-receivers-container');
+    if (container) container.innerHTML = ''; // clear old rows
+    
+    let splitRules = uc.split_rules || [];
+    
+    // Backward compatibility with single split config
+    if (!uc.split_rules && uc.split && uc.split.walletId) {
+      splitRules = [{
+        walletId: uc.split.walletId,
+        type: uc.split.type || 'percentage',
+        value: uc.split.value || 0
+      }];
+    }
+    
+    const splitEnabled = uc.split ? !!uc.split.enabled : (uc.split_rules && uc.split_rules.length > 0);
+    if(document.getElementById('prod-split-enabled')) document.getElementById('prod-split-enabled').checked = splitEnabled;
+
+    splitRules.forEach(r => window.addSplitRow(r.walletId, r.type, r.value));
 
     document.getElementById('modal-product').style.display = 'flex';
   }
@@ -1870,6 +1915,42 @@ window.saveProduct = async function() {
 
   const splitEnabled = document.getElementById('prod-split-enabled') ? document.getElementById('prod-split-enabled').checked : false;
   
+  const splitRules = [];
+  let totalPercentage = 0;
+  let totalFixed = 0;
+  
+  const splitRows = document.querySelectorAll('.split-row');
+  for (let row of splitRows) {
+    const wallet = row.querySelector('.split-wallet-input').value.trim();
+    const type = row.querySelector('.split-type-input').value;
+    const value = parseFloat(row.querySelector('.split-value-input').value || 0);
+    
+    if (!wallet) {
+      alert('Existem recebedores com Wallet ID em branco no Split. Remova ou preencha.');
+      return;
+    }
+    if (value <= 0) {
+      alert('Os valores de split devem ser maiores que zero.');
+      return;
+    }
+    
+    if (type === 'percentage') totalPercentage += value;
+    if (type === 'fixed') totalFixed += value;
+    
+    splitRules.push({ walletId: wallet, type, value });
+  }
+  
+  if (totalPercentage > 100) {
+    alert('A soma das porcentagens do Split não pode ultrapassar 100%.');
+    return;
+  }
+  
+  const currentPrice = parseFloat(getVal('prod-sale-price', '0')) || parseFloat(getVal('prod-price', '0')) || 0;
+  if (totalFixed > currentPrice && currentPrice > 0) {
+    alert('A soma dos valores fixos do Split não pode ser maior que o valor do produto.');
+    return;
+  }
+  
   payload.checkout_config = {
     upsell_enabled: upsellEnabled,
     upsell_title: getVal('prod-upsell-title'),
@@ -1881,11 +1962,9 @@ window.saveProduct = async function() {
     upsell_video_url: getVal('prod-upsell-video'),
     upsell_image_url: getVal('prod-upsell-image'),
     split: {
-      enabled: splitEnabled,
-      walletId: getVal('prod-split-wallet'),
-      type: getVal('prod-split-type', 'percentage'),
-      value: parseFloat(getVal('prod-split-value', '0') || 0)
-    }
+      enabled: splitEnabled
+    },
+    split_rules: splitRules
   };
 
   if (!payload.name || !payload.slug) {

@@ -27,6 +27,7 @@
       <li><a href="#" data-target="module-funnel">📈 Funil</a></li>
       <li><a href="#" data-target="module-vendas">💰 Vendas</a></li>
       <li><a href="#" data-target="module-gateways" style="color: #10B981; font-weight: 600;">🏦 Central Financeira</a></li>
+      <li><a href="#" data-target="module-fin-logs" style="color: #F59E0B; font-weight: 600;">💰 Logs Financeiros</a></li>
       <li><a href="#" data-target="module-campaigns">📢 Campanhas</a></li>
       <li><a href="#" data-target="module-ads">🎯 Meta / Google Ads</a></li>
       <li><a href="#" data-target="module-webhooks">🔌 Webhooks</a></li>
@@ -1001,26 +1002,14 @@
                   <label for="prod-split-enabled" style="font-size: 14px; color: var(--text-primary); cursor: pointer;">Ativar Split automático para este produto</label>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px;">
-                  <div>
-                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Wallet ID do Parceiro/Afiliado (Obrigatório se ativado)</label>
-                    <input type="text" id="prod-split-wallet" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: c8ed23a1-2d... (Pegue no Asaas do recebedor)">
-                  </div>
+                <div id="split-receivers-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                  <!-- As linhas de parceiros serão injetadas aqui pelo admin-app.js -->
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                  <div>
-                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Tipo de Repasse</label>
-                    <select id="prod-split-type" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
-                      <option value="percentage">Porcentagem (%)</option>
-                      <option value="fixed">Valor Fixo (R$)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Valor ou Porcentagem</label>
-                    <input type="number" step="0.01" id="prod-split-value" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: 30 para 30%">
-                  </div>
-                </div>
+                <button onclick="window.addSplitRow()" type="button" style="background: rgba(255,255,255,0.05); border: 1px dashed var(--border); color: var(--text-primary); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; margin-bottom: 16px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Adicionar Parceiro/Recebedor
+                </button>
               </div>
             </div>
 
@@ -1156,6 +1145,64 @@
 
       <section id="module-config" class="module-section"><h2>Configurações do Sistema</h2><p style="color: var(--text-muted)">Ajustes de Pixel, GA4 e Edge Functions.</p></section>
 
+      <section id="module-fin-logs" class="module-section">
+        <h2>💰 Logs Financeiros</h2>
+        
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Cobranças Totais</h3>
+            <div class="kpi-value" id="kpi-fin-total-charges" style="font-size: 24px;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Aprovadas / Recebidas</h3>
+            <div class="kpi-value" id="kpi-fin-approved" style="font-size: 24px; color: var(--success);">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Vencidas / Falhas</h3>
+            <div class="kpi-value" id="kpi-fin-failed" style="font-size: 24px; color: var(--danger);">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Com Split</h3>
+            <div class="kpi-value" id="kpi-fin-splits" style="font-size: 24px; color: var(--accent);">0</div>
+          </div>
+        </div>
+
+        <div class="table-card" style="margin-top: 24px;">
+          <div class="table-header">
+            <h3>Registro de Eventos</h3>
+            <div class="table-filters" style="display: flex; gap: 8px;">
+              <select id="fin-filter-status" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 6px 12px; border-radius: 4px; outline: none; font-size: 13px;">
+                <option value="all">Todos os Status</option>
+                <option value="RECEIVED">Recebido</option>
+                <option value="CONFIRMED">Confirmado</option>
+                <option value="PENDING">Pendente</option>
+                <option value="OVERDUE">Vencido</option>
+                <option value="FAILED">Falho</option>
+              </select>
+              <input type="text" id="search-fin-logs" placeholder="Buscar ID, Cliente..." style="width: 250px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 6px 12px; border-radius: 4px; outline: none; font-size: 13px;">
+            </div>
+          </div>
+          <div style="overflow-x: auto;">
+            <table style="font-size: 12px; width: 100%; text-align: left; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Data</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Produto</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Cliente</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Valor</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Status</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Split</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="fin-logs-tbody">
+                <tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Carregando logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
     </div>
   </div>
 
@@ -1183,8 +1230,25 @@
     </div>
   </div>
 
+  <!-- DRAWER: FIN LOG DETAIL -->
+  <div class="drawer-overlay" id="drawer-fin-overlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; backdrop-filter: blur(2px);">
+    <div class="drawer-panel" id="drawer-fin-panel" style="position: absolute; top: 0; right: -500px; width: 500px; max-width: 100%; height: 100%; background: #121214; border-left: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; transition: right 0.3s ease; box-shadow: -5px 0 25px rgba(0,0,0,0.5); overflow-y: auto;">
+      <div class="drawer-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <div>
+          <div class="drawer-title" id="dfin-title" style="font-size: 18px; font-weight: 700; color: white;">Detalhes do Log</div>
+          <div class="drawer-subtitle" id="dfin-subtitle" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">...</div>
+        </div>
+        <button class="drawer-close" onclick="window.closeFinDrawer()" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+      <div class="drawer-body" id="dfin-body" style="font-size: 13px; color: var(--text-primary); display: flex; flex-direction: column; gap: 16px;">
+        <!-- Injetado dinamicamente -->
+      </div>
+    </div>
+  </div>
+
   <script src="tracking.js"></script>
   <script src="supabase-client.js"></script>
   <script src="admin-app.js"></script>
+  <script src="admin-fin-logs.js"></script>
 </body>
 </html>

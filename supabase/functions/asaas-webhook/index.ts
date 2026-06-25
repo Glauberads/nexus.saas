@@ -144,6 +144,22 @@ serve(async (req) => {
         gateway: 'asaas', lead_id: internalPayment?.lead_id, attempt_type: eventType, status: 'failed', amount: payment.value, payload: payment
       }]);
     }
+    // 3.5 Inserir Log Financeiro (Observabilidade)
+    try {
+      await supabase.from('financial_logs').insert([{
+        event_type: eventType.toLowerCase(),
+        event_source: 'asaas-webhook',
+        gateway: 'asaas',
+        payment_id: payment.id,
+        payment_status: payment.status,
+        payment_method: payment.billingType,
+        amount: payment.value,
+        net_amount: payment.netValue,
+        response_payload: payload
+      }]);
+    } catch (logErr) {
+      console.error("Failed to write to financial_logs via webhook:", logErr);
+    }
 
     // 4. Disparar webhook global do n8n (Opcional/Assíncrono)
     try {

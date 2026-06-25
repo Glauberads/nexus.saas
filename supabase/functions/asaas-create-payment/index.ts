@@ -33,16 +33,22 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let reqBody: any = {};
+  let productData: any = null;
+  let finalAmount = 0;
+  let splitRulesGlob: any[] = [];
+  
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
-    const { lead_id, checkout_session_id, product_slug, name, email, cpfCnpj, phone, billingType, description, dueDate, installments } = await req.json();
+    reqBody = await req.json();
+    const { lead_id, checkout_session_id, product_slug, name, email, cpfCnpj, phone, billingType, description, dueDate, installments } = reqBody;
 
     if (!email || !billingType || !product_slug) {
       throw new Error('Missing required fields: email, billingType, product_slug');
     }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const encryptionSecret = Deno.env.get('GATEWAY_ENCRYPTION_SECRET');
     if (!encryptionSecret) throw new Error('Encryption secret not configured');
@@ -58,6 +64,7 @@ serve(async (req) => {
 
     // 0. Validar Produto e Obter Preço Real
     const { data: product, error: prodErr } = await supabase.from('products').select('*').eq('checkout_slug', product_slug).single();
+    productData = product;
     
     if (prodErr || !product) throw new Error('Produto não encontrado.');
     if (product.status !== 'active' || !product.checkout_enabled) throw new Error('Produto não está disponível para venda.');
@@ -103,6 +110,7 @@ serve(async (req) => {
       const discountAmount = finalValue * (product.pix_discount / 100);
       finalValue = finalValue - discountAmount;
     }
+    finalAmount = finalValue;
     
     const paymentPayload: any = {
       customer: customerId,
@@ -122,26 +130,56 @@ serve(async (req) => {
        // but assuming standard payment payload handles basic fields.
     }
 
-    // Handle Split
+    // Handle Split (Multiple Receivers)
     const splitConfig = product.checkout_config?.split;
+    let splitRules = product.checkout_config?.split_rules || [];
+    
     if (splitConfig && splitConfig.enabled) {
-      if (!splitConfig.walletId || typeof splitConfig.value !== 'number' || splitConfig.value <= 0) {
-        throw new Error('Configuração de split inválida: walletId e valor numérico maior que zero são obrigatórios.');
+      // Backward compatibility with older single-receiver format
+      if (splitRules.length === 0 && splitConfig.walletId) {
+        splitRules = [{
+          walletId: splitConfig.walletId,
+          type: splitConfig.type || 'percentage',
+          value: splitConfig.value
+        }];
       }
-      
-      const splitObj: any = {
-        walletId: splitConfig.walletId
-      };
-      
-      if (splitConfig.type === 'percentage') {
-        splitObj.percentualValue = splitConfig.value;
-      } else if (splitConfig.type === 'fixed') {
-        splitObj.fixedValue = splitConfig.value;
-      } else {
-         throw new Error('Configuração de split inválida: tipo de repasse desconhecido.');
+
+      if (splitRules.length > 0) {
+        const asaasSplitArray = [];
+        let totalPercentage = 0;
+        let totalFixed = 0;
+
+        for (const rule of splitRules) {
+          if (!rule.walletId || typeof rule.value !== 'number' || rule.value <= 0) {
+            throw new Error('Configuração de split inválida: walletId e valor numérico maior que zero são obrigatórios para todos os recebedores.');
+          }
+
+          const splitObj: any = { walletId: rule.walletId };
+
+          if (rule.type === 'percentage') {
+            splitObj.percentualValue = rule.value;
+            totalPercentage += rule.value;
+          } else if (rule.type === 'fixed') {
+            splitObj.fixedValue = rule.value;
+            totalFixed += rule.value;
+          } else {
+             throw new Error('Configuração de split inválida: tipo de repasse desconhecido.');
+          }
+
+          asaasSplitArray.push(splitObj);
+        }
+
+        // Validação de limites
+        if (totalPercentage > 100) {
+          throw new Error('Configuração de split inválida: a soma das porcentagens ultrapassa 100%.');
+        }
+        if (totalFixed > finalValue) {
+          throw new Error('Configuração de split inválida: a soma dos valores fixos ultrapassa o valor total da cobrança.');
+        }
+
+        paymentPayload.split = asaasSplitArray;
+        splitRulesGlob = asaasSplitArray; // pra salvar nos logs financeiros
       }
-      
-      paymentPayload.split = [splitObj];
     }
 
     const payRes = await fetch(`${baseUrl}/payments`, {
@@ -163,9 +201,31 @@ serve(async (req) => {
       }
     }
 
-    // 4. Salvar logs internos
+    // 4. Salvar logs internos e logs financeiros
     await supabase.from('payment_attempts').insert([{
-      gateway: 'asaas', lead_id, attempt_type: `${billingType}_CREATED`, status: 'pending', amount: realPrice, payload: payData
+      gateway: 'asaas', lead_id, attempt_type: `${billingType}_CREATED`, status: 'pending', amount: realPrice, payload: { ...payData, _applied_split: paymentPayload.split || [] }
+    }]);
+
+    await supabase.from('financial_logs').insert([{
+      event_type: 'payment_created',
+      event_source: 'asaas-create-payment',
+      product_id: product.id,
+      product_name: product.name,
+      product_slug: product.checkout_slug,
+      customer_name: name,
+      customer_email: email,
+      customer_phone: phone,
+      customer_document: cpfCnpj,
+      gateway: 'asaas',
+      payment_id: payData.id,
+      payment_status: payData.status,
+      payment_method: billingType,
+      amount: finalValue,
+      net_amount: payData.netValue,
+      split_enabled: splitRulesGlob.length > 0,
+      metadata: { applied_splits: splitRulesGlob },
+      request_payload: paymentPayload,
+      response_payload: payData
     }]);
 
     await supabase.from('asaas_payments').insert([{
@@ -206,6 +266,31 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(error);
+    
+    // Log do erro em financial_logs
+    try {
+      await supabase.from('financial_logs').insert([{
+        event_type: 'payment_failed',
+        event_source: 'asaas-create-payment',
+        product_id: productData?.id,
+        product_name: productData?.name,
+        product_slug: reqBody?.product_slug,
+        customer_name: reqBody?.name,
+        customer_email: reqBody?.email,
+        customer_phone: reqBody?.phone,
+        customer_document: reqBody?.cpfCnpj,
+        gateway: 'asaas',
+        payment_method: reqBody?.billingType,
+        amount: finalAmount,
+        split_enabled: splitRulesGlob.length > 0,
+        metadata: { applied_splits: splitRulesGlob },
+        request_payload: reqBody,
+        error_message: error.message || String(error)
+      }]);
+    } catch (logErr) {
+       console.error("Failed to write to financial_logs:", logErr);
+    }
+
     return new Response(JSON.stringify({ success: false, error: error.message }), { 
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
