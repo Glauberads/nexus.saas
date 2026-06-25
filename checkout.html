@@ -203,10 +203,47 @@
         </div>
 
         <div id="tab-CREDIT_CARD" class="tab-content">
-          <div style="padding: 24px; text-align: center; border: 1px dashed var(--border); border-radius: 8px;">
-            <p style="color: var(--text-secondary); margin-bottom: 8px;">Opção em breve.</p>
-            <p style="font-size: 12px; color: var(--text-muted);">Por segurança, estamos finalizando a integração de tokenização (PCI Compliance). Por favor, utilize o PIX no momento.</p>
+          <div class="form-group">
+            <label>Número do Cartão</label>
+            <input type="text" id="cc-number" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19">
           </div>
+          <div class="form-group">
+            <label>Nome Impresso no Cartão</label>
+            <input type="text" id="cc-name" class="form-control" placeholder="Como está no cartão">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Validade</label>
+              <input type="text" id="cc-expiry" class="form-control" placeholder="MM/AA" maxlength="5">
+            </div>
+            <div class="form-group">
+              <label>CVV</label>
+              <input type="text" id="cc-cvv" class="form-control" placeholder="123" maxlength="4">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Parcelamento</label>
+            <select id="cc-installments" class="form-control">
+              <option value="1">1x (Sem juros)</option>
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+          
+          <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+            <h4 style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Endereço de Faturamento</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>CEP</label>
+                <input type="text" id="c-cep" class="form-control" placeholder="00000-000" maxlength="9">
+              </div>
+              <div class="form-group">
+                <label>Número</label>
+                <input type="text" id="c-number" class="form-control" placeholder="123">
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-submit" onclick="processPayment()" style="margin-top: 16px;">Finalizar Pagamento</button>
         </div>
 
         <div id="tab-BOLETO" class="tab-content">
@@ -295,6 +332,35 @@
     document.getElementById('c-phone').addEventListener('input', function (e) {
       let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
       e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+    });
+
+    document.getElementById('c-cep').addEventListener('input', function (e) {
+      let x = e.target.value.replace(/\D/g, '').match(/(\d{0,5})(\d{0,3})/);
+      e.target.value = !x[2] ? x[1] : x[1] + '-' + x[2];
+    });
+
+    document.getElementById('cc-number').addEventListener('input', function (e) {
+      let v = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+      let matches = v.match(/\d{4,16}/g);
+      let match = matches && matches[0] || '';
+      let parts = [];
+      for (let i=0; i<match.length; i+=4) {
+          parts.push(match.substring(i, i+4));
+      }
+      if (parts.length) {
+          e.target.value = parts.join(' ');
+      } else {
+          e.target.value = v;
+      }
+    });
+
+    document.getElementById('cc-expiry').addEventListener('input', function (e) {
+      let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,2})/);
+      e.target.value = !x[2] ? x[1] : x[1] + '/' + x[2];
+    });
+
+    document.getElementById('cc-cvv').addEventListener('input', function (e) {
+      e.target.value = e.target.value.replace(/\D/g, '');
     });
   </script>
 

@@ -44,7 +44,7 @@ serve(async (req) => {
 
   try {
     reqBody = await req.json();
-    const { lead_id, checkout_session_id, product_slug, name, email, cpfCnpj, phone, billingType, description, dueDate, installments } = reqBody;
+    const { lead_id, checkout_session_id, product_slug, name, email, cpfCnpj, phone, billingType, description, dueDate, installments, creditCard, creditCardHolderInfo } = reqBody;
 
     if (!email || !billingType || !product_slug) {
       throw new Error('Missing required fields: email, billingType, product_slug');
@@ -121,13 +121,14 @@ serve(async (req) => {
       externalReference: checkout_session_id
     };
 
-    // Handle installments if CREDIT_CARD
-    if (billingType === 'CREDIT_CARD' && installments > 1) {
-       // Asaas has a different endpoint for installments but for simplification of this MVP
-       paymentPayload.installmentCount = Math.min(installments, product.max_installments || 12);
-       paymentPayload.installmentValue = finalValue / paymentPayload.installmentCount;
-       // We'll let Asaas handle the exact breakdown if we were using the full installment API, 
-       // but assuming standard payment payload handles basic fields.
+    if (billingType === 'CREDIT_CARD') {
+      if (creditCard) paymentPayload.creditCard = creditCard;
+      if (creditCardHolderInfo) paymentPayload.creditCardHolderInfo = creditCardHolderInfo;
+      
+      if (installments && installments > 1) {
+        paymentPayload.installmentCount = Math.min(installments, product.max_installments || 12);
+        paymentPayload.installmentValue = finalValue / paymentPayload.installmentCount;
+      }
     }
 
     // Handle Split (Multiple Receivers)
@@ -202,6 +203,11 @@ serve(async (req) => {
     }
 
     // 4. Salvar logs internos e logs financeiros
+    const safePayload = { ...paymentPayload };
+    if (safePayload.creditCard) {
+      safePayload.creditCard = { ...safePayload.creditCard, number: '****', ccv: '***', expiryMonth: '**', expiryYear: '****' };
+    }
+
     await supabase.from('payment_attempts').insert([{
       gateway: 'asaas', lead_id, attempt_type: `${billingType}_CREATED`, status: 'pending', amount: realPrice, payload: { ...payData, _applied_split: paymentPayload.split || [] }
     }]);
@@ -224,7 +230,7 @@ serve(async (req) => {
       net_amount: payData.netValue,
       split_enabled: splitRulesGlob.length > 0,
       metadata: { applied_splits: splitRulesGlob },
-      request_payload: paymentPayload,
+      request_payload: safePayload,
       response_payload: payData
     }]);
 
@@ -267,6 +273,12 @@ serve(async (req) => {
   } catch (error) {
     console.error(error);
     
+    // Sanitizar reqBody no log de erro
+    const safeReqBody = { ...reqBody };
+    if (safeReqBody.creditCard) {
+       safeReqBody.creditCard = { ...safeReqBody.creditCard, number: '****', ccv: '***', expiryMonth: '**', expiryYear: '****' };
+    }
+
     // Log do erro em financial_logs
     try {
       await supabase.from('financial_logs').insert([{
@@ -284,7 +296,7 @@ serve(async (req) => {
         amount: finalAmount,
         split_enabled: splitRulesGlob.length > 0,
         metadata: { applied_splits: splitRulesGlob },
-        request_payload: reqBody,
+        request_payload: safeReqBody,
         error_message: error.message || String(error)
       }]);
     } catch (logErr) {

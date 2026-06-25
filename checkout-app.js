@@ -93,12 +93,20 @@ async function initCheckout(config) {
   if (session) {
     currentSessionId = session.id;
   }
+
+  // Preencher parcelas se max_installments estiver configurado no produto
+  const maxInst = product.checkout_config?.max_installments || 12;
+  const instSelect = document.getElementById('cc-installments');
+  if (instSelect) {
+    instSelect.innerHTML = '<option value="1">1x (Sem juros) - ' + formatter.format(currentProduct.finalPrice) + '</option>';
+    for (let i = 2; i <= maxInst; i++) {
+      let val = currentProduct.finalPrice / i;
+      instSelect.innerHTML += '<option value="' + i + '">' + i + 'x de ' + formatter.format(val) + '</option>';
+    }
+  }
 }
 
 function setPaymentMethod(method, element) {
-  if (method === 'CREDIT_CARD') {
-    // Apenas seleciona visualmente, mas impede avançar por enquanto
-  }
   
   selectedPaymentMethod = method;
   
@@ -165,6 +173,51 @@ async function processPayment() {
     return;
   }
 
+  let creditCardObj = null;
+  let creditCardHolderInfoObj = null;
+  let installments = 1;
+
+  if (selectedPaymentMethod === 'CREDIT_CARD') {
+    const ccNum = document.getElementById('cc-number').value.replace(/\s/g, '');
+    const ccName = document.getElementById('cc-name').value;
+    const ccExpiry = document.getElementById('cc-expiry').value;
+    const ccCvv = document.getElementById('cc-cvv').value;
+    const cep = document.getElementById('c-cep').value;
+    const addressNum = document.getElementById('c-number').value;
+
+    if (!ccNum || !ccName || !ccExpiry || !ccCvv || !cep || !addressNum) {
+      alert("Preencha todos os dados do cartão e endereço de faturamento.");
+      return;
+    }
+
+    if (ccExpiry.length !== 5 || !ccExpiry.includes('/')) {
+      alert("Validade inválida. Use MM/AA.");
+      return;
+    }
+
+    const [expMonth, expYear] = ccExpiry.split('/');
+    
+    creditCardObj = {
+      holderName: ccName,
+      number: ccNum,
+      expiryMonth: expMonth,
+      expiryYear: expYear,
+      ccv: ccCvv
+    };
+
+    creditCardHolderInfoObj = {
+      name: name,
+      email: email,
+      cpfCnpj: cpfCnpj.replace(/\D/g, ''),
+      postalCode: cep.replace(/\D/g, ''),
+      addressNumber: addressNum,
+      phone: phone.replace(/\D/g, ''),
+      mobilePhone: phone.replace(/\D/g, '')
+    };
+
+    installments = parseInt(document.getElementById('cc-installments').value) || 1;
+  }
+
   // Garantir que lead tá atualizado
   await captureLead();
 
@@ -186,7 +239,10 @@ async function processPayment() {
       email,
       phone,
       cpfCnpj: cpfCnpj.replace(/\D/g, ''),
-      billingType: selectedPaymentMethod
+      billingType: selectedPaymentMethod,
+      installments,
+      ...(creditCardObj && { creditCard: creditCardObj }),
+      ...(creditCardHolderInfoObj && { creditCardHolderInfo: creditCardHolderInfoObj })
     };
 
     const res = await fetch(edgeUrl, {
