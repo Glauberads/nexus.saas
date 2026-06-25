@@ -366,5 +366,165 @@
       }
     });
   </script>
+
+  <!-- ========================================== -->
+  <!-- FOOTER PROFISSIONAL NEXUS                  -->
+  <!-- ========================================== -->
+  <style>
+    .nexus-footer {
+      background: #0A0A0A;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding: 64px 20px 32px 20px;
+      color: #A1A1AA;
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+      margin-top: auto;
+      z-index: 10;
+      position: relative;
+    }
+    .nexus-footer-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+    .nexus-footer-brand h2 {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .nexus-footer-brand h2 span { color: #8B5CF6; }
+    .nexus-footer-brand p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #A1A1AA;
+    }
+    .nexus-footer-title {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .nexus-footer-links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .nexus-footer-links a {
+      color: #A1A1AA;
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nexus-footer-links a:hover {
+      color: #8B5CF6;
+      transform: translateX(4px);
+    }
+    .nexus-footer-social {
+      display: flex;
+      gap: 16px;
+    }
+    .nexus-footer-social a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      color: #fff;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .nexus-footer-social a:hover {
+      background: #8B5CF6;
+      border-color: #8B5CF6;
+      transform: translateY(-4px);
+    }
+    .nexus-footer-bottom {
+      max-width: 1100px;
+      margin: 0 auto;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .nexus-footer-bottom p { margin: 0; }
+    
+    @media (max-width: 768px) {
+      .nexus-footer-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+      .nexus-footer-links {
+        align-items: center;
+      }
+      .nexus-footer-links a:hover {
+        transform: none;
+      }
+      .nexus-footer-social {
+        justify-content: center;
+      }
+      .nexus-footer-bottom {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+  </style>
+
+  <footer class="nexus-footer">
+    <div class="nexus-footer-container">
+      <div class="nexus-footer-brand">
+        <h2>⬡ Nexus<span>SaaS</span></h2>
+        <p>A infraestrutura definitiva para escalar o seu Software as a Service com conversão e retenção premium.</p>
+      </div>
+      <div>
+        <div class="nexus-footer-title">Suporte</div>
+        <ul class="nexus-footer-links">
+          <li><a href="mailto:contato@glauberads.com.br">📧 contato@glauberads.com.br</a></li>
+        </ul>
+        <div class="nexus-footer-title" style="margin-top: 32px;">Redes Sociais</div>
+        <div class="nexus-footer-social">
+          <a href="https://www.instagram.com/glauberads" target="_blank" rel="noopener noreferrer" title="Instagram">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+          </a>
+        </div>
+      </div>
+      <div>
+        <div class="nexus-footer-title">Legal</div>
+        <ul class="nexus-footer-links">
+          <li><a href="#">Termos de Uso</a></li>
+          <li><a href="#">Políticas de Privacidade</a></li>
+        </ul>
+        <div style="margin-top: 24px; font-size: 13px; color: #71717A; line-height: 1.6;">
+          <strong style="color: #A1A1AA;">Glauber Ads LTDA</strong><br>
+          CNPJ: 31.097.622/0001-03
+        </div>
+      </div>
+    </div>
+    <div class="nexus-footer-bottom">
+      <p>&copy; 2026 NexusSaaS. Todos os direitos reservados.</p>
+      <div style="display: flex; gap: 8px; align-items: center; color: #71717A;">
+        <span>Desenvolvido com</span>
+        <span style="color: #EF4444;">❤️</span>
+        <span>pela Nexus</span>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
