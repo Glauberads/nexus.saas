@@ -1782,6 +1782,7 @@ window.editProduct = async function(id) {
     if(document.getElementById('prod-checkout-enabled')) document.getElementById('prod-checkout-enabled').value = p.checkout_enabled ? 'true' : 'false';
     if(document.getElementById('prod-pix-discount')) document.getElementById('prod-pix-discount').value = p.pix_discount || '';
     if(document.getElementById('prod-max-installments')) document.getElementById('prod-max-installments').value = p.max_installments || 12;
+    if(document.getElementById('prod-upsell-video')) document.getElementById('prod-upsell-video').value = p.checkout_config?.upsell_video_url || '';
 
     document.getElementById('modal-product').style.display = 'flex';
   }
@@ -1812,6 +1813,11 @@ window.saveProduct = async function() {
   if(document.getElementById('prod-checkout-enabled')) payload.checkout_enabled = getVal('prod-checkout-enabled', 'false') === 'true';
   if(document.getElementById('prod-pix-discount')) payload.pix_discount = parseFloat(getVal('prod-pix-discount', '0') || 0);
   if(document.getElementById('prod-max-installments')) payload.max_installments = parseInt(getVal('prod-max-installments', '12') || 12);
+  
+  // Atualizar checkout_config com o vídeo do upsell
+  if(document.getElementById('prod-upsell-video')) {
+    payload.checkout_config = { upsell_video_url: getVal('prod-upsell-video') };
+  }
 
   if (!payload.name || !payload.slug) {
     alert("Nome e Slug são obrigatórios.");

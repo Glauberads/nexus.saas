@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexusSaaS | Pedido Recebido</title>
+  <title>NexusSaaS | Pagamento Confirmado</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-main: #0A0A0A;
-      --bg-card: #161616;
+      --bg-main: #09090b;
+      --bg-card: rgba(22, 22, 22, 0.6);
       --border: rgba(255, 255, 255, 0.08);
       --text-primary: #EDEDED;
       --text-secondary: #A1A1AA;
-      --accent: #8B5CF6;
-      --success: #22C55E;
+      --accent: #FF6B00;
+      --accent-hover: #e56000;
+      --success: #10b981;
       --warning: #F59E0B;
       --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
     }
@@ -24,101 +25,292 @@
     
     body {
       font-family: var(--font-sans);
-      background: var(--bg-main);
+      background: var(--bg-main) radial-gradient(circle at 50% -20%, rgba(16, 185, 129, 0.15), transparent 60%);
       color: var(--text-primary);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
+      padding: 40px 20px;
     }
 
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 40px;
-      max-width: 600px;
+    .container {
       width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* GLASSMORPHISM CARD */
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
       text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
     }
 
-    .icon-success {
-      width: 80px; height: 80px; background: rgba(34, 197, 94, 0.1); color: var(--success);
+    /* TOP GLOW */
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--success), transparent);
+      opacity: 0.5;
+    }
+
+    .icon-wrapper {
+      width: 80px; height: 80px; 
       border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 40px; margin: 0 auto 24px auto;
+      font-size: 36px; margin: 0 auto 24px auto;
+      box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
     }
-    .icon-pending {
-      width: 80px; height: 80px; background: rgba(245, 158, 11, 0.1); color: var(--warning);
-      border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 40px; margin: 0 auto 24px auto;
-    }
+    .icon-success { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
+    .icon-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); box-shadow: 0 0 30px rgba(245, 158, 11, 0.2); }
 
-    h1 { font-size: 24px; font-weight: 800; margin-bottom: 16px; }
-    p { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 32px; }
-
-    .btn-primary {
-      display: inline-block; padding: 16px 32px; background: var(--accent); color: white;
-      text-decoration: none; font-weight: 700; border-radius: 8px; font-size: 16px; transition: 0.2s;
-    }
-    .btn-primary:hover { background: #7C3AED; transform: translateY(-2px); }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px; }
+    p.lead-text { font-size: 16px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 32px; }
 
     .next-steps {
-      text-align: left; background: rgba(255,255,255,0.02); padding: 24px;
+      text-align: left; background: rgba(0,0,0,0.3); padding: 24px;
       border-radius: 12px; border: 1px solid var(--border); margin-bottom: 32px;
     }
-    .next-steps h3 { font-size: 14px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
+    .next-steps h3 { font-size: 14px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 16px; font-weight: 700; letter-spacing: 1px;}
     .next-steps ul { list-style: none; }
-    .next-steps li { display: flex; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--text-secondary); }
+    .next-steps li { display: flex; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--text-primary); align-items: flex-start; }
     .next-steps li:last-child { margin-bottom: 0; }
+    .step-num { color: var(--success); font-weight: 700; }
+
+    .btn-outline {
+      display: inline-block; padding: 14px 28px; background: transparent; color: var(--text-primary);
+      text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 15px; border: 1px solid var(--border);
+      transition: 0.2s; cursor: pointer;
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.05); }
+
+    /* UPSELL SECTION */
+    .upsell-box {
+      background: linear-gradient(145deg, #161616, #121214);
+      border: 1px solid rgba(255, 107, 0, 0.3);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: left;
+      box-shadow: 0 20px 40px rgba(255, 107, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    .upsell-box::before {
+      content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+      background: linear-gradient(90deg, var(--accent), #ff9800);
+    }
+    
+    .upsell-badge {
+      display: inline-block; background: rgba(255, 107, 0, 0.1); color: var(--accent);
+      padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;
+      border: 1px solid rgba(255, 107, 0, 0.2);
+    }
+
+    .upsell-box h2 { font-size: 24px; font-weight: 800; margin-bottom: 12px; line-height: 1.3;}
+    .upsell-box h2 span { color: var(--accent); }
+    .upsell-desc { color: var(--text-secondary); font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+    
+    .video-placeholder {
+      width: 100%; aspect-ratio: 16/9; background: #000; border: 1px solid var(--border);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px; color: var(--text-secondary); font-size: 14px;
+      position: relative; overflow: hidden;
+    }
+    .video-placeholder::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.03), transparent);
+      animation: shimmer 2s infinite;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+    .upsell-benefits { list-style: none; margin-bottom: 32px; }
+    .upsell-benefits li { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 14px; color: var(--text-primary); }
+    .upsell-benefits li svg { width: 18px; height: 18px; color: var(--success); flex-shrink: 0;}
+
+    .price-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .price-old { text-decoration: line-through; color: var(--text-secondary); font-size: 16px; }
+    .price-new { font-size: 32px; font-weight: 800; color: var(--text-primary); }
+
+    .btn-upsell {
+      display: block; width: 100%; background: var(--success); color: white; border: none;
+      padding: 18px; font-size: 16px; font-weight: 700; border-radius: 12px; cursor: pointer;
+      transition: transform 0.2s, background 0.2s, box-shadow 0.2s; text-decoration: none; text-align: center;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3); margin-bottom: 16px;
+    }
+    .btn-upsell:hover { transform: translateY(-2px); background: #0ea5e9; box-shadow: 0 12px 32px rgba(14, 165, 233, 0.4); }
+    
+    .btn-decline {
+      display: block; width: 100%; text-align: center; color: var(--text-secondary);
+      text-decoration: underline; cursor: pointer; font-size: 13px; background: none; border: none; transition: 0.2s;
+    }
+    .btn-decline:hover { color: var(--text-primary); }
+
+    @media (max-width: 600px) {
+      body { padding: 20px 16px; }
+      .glass-card { padding: 32px 20px; }
+      .upsell-box { padding: 32px 20px; }
+      h1 { font-size: 24px; }
+      .upsell-box h2 { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
 
-  <div class="card" id="status-card">
-    <div style="color: var(--text-muted); margin-bottom: 24px;">Carregando status do pedido...</div>
+  <div class="container">
+    
+    <!-- ÁREA DE SUCESSO DO PEDIDO (DINÂMICA) -->
+    <div class="glass-card" id="status-card">
+      <div style="color: var(--text-secondary); text-align: center; font-size: 14px;">Processando status do seu pedido...</div>
+    </div>
+
+    <!-- ÁREA DO UPSELL -->
+    <div class="upsell-box" id="upsell-box" style="display: none;">
+      <span class="upsell-badge">Atenção: Não feche esta página</span>
+      <h2>Sua jornada está quase completa.<br><span>Deseja pular a parte técnica?</span></h2>
+      <p class="upsell-desc">Adicione a nossa <strong>Instalação "Done For You"</strong> e tenha a sua plataforma e área de membros configurada e rodando em até 24h, sem tocar em 1 linha de código.</p>
+
+
+
+      <ul class="upsell-benefits">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Configuração completa do seu Domínio Personalizado</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Integração ativa com seu Gateway de Pagamento</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Configuração de E-mails Automáticos</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Personalização da sua Logo e Cores Primárias</li>
+      </ul>
+
+      <div class="price-wrap">
+        <span class="price-old">R$ 1.500</span>
+        <span class="price-new">R$ 297</span>
+      </div>
+
+      <a href="checkout.html?product=instalacao-pro" class="btn-upsell" id="btn-accept-upsell">SIM! Adicionar Instalação Profissional</a>
+      
+      <button class="btn-decline" id="btn-decline-upsell">Não, obrigado. Eu mesmo vou configurar a parte técnica.</button>
+    </div>
+
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="tracking.js"></script>
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const status = urlParams.get('status');
-    const card = document.getElementById('status-card');
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get('status');
+      const card = document.getElementById('status-card');
+      const upsellBox = document.getElementById('upsell-box');
 
-    if (status === 'paid') {
-      card.innerHTML = `
-        <div class="icon-success">✓</div>
-        <h1>Pagamento Aprovado!</h1>
-        <p>Seu pagamento foi confirmado com sucesso. Você já tem acesso ao sistema e todos os materiais liberados.</p>
+      // 1. RENDERIZAR MENSAGEM DE SUCESSO/PENDENTE
+      if (status === 'paid') {
+        card.innerHTML = `
+          <div class="icon-wrapper icon-success">✓</div>
+          <h1>Pagamento Aprovado!</h1>
+          <p class="lead-text">Seu pagamento foi confirmado com sucesso. O seu acesso ao sistema e todos os bônus já foram liberados.</p>
+          
+          <div class="next-steps">
+            <h3>Próximos Passos:</h3>
+            <ul>
+              <li><span class="step-num">01.</span> <div>Enviamos as instruções e credenciais de acesso para o seu e-mail.</div></li>
+              <li><span class="step-num">02.</span> <div>Você já pode acessar o Portal do Cliente e baixar os seus sistemas.</div></li>
+              <li><span class="step-num">03.</span> <div>Caso não encontre o e-mail, verifique a caixa de Spam.</div></li>
+            </ul>
+          </div>
+          <a href="cliente-login.html" class="btn-outline">Acessar Área de Membros</a>
+        `;
         
-        <div class="next-steps">
-          <h3>Próximos Passos:</h3>
-          <ul>
-            <li><span>1.</span> Enviamos as instruções de acesso para o seu e-mail.</li>
-            <li><span>2.</span> Clique no botão abaixo para acessar a Área de Membros.</li>
-            <li><span>3.</span> Caso seja seu primeiro acesso, use a opção "Esqueci minha senha" usando o e-mail da compra.</li>
-          </ul>
-        </div>
+        upsellBox.style.display = 'block';
+        
+      } else if (status === 'pending') {
+        card.innerHTML = `
+          <div class="icon-wrapper icon-pending">⏳</div>
+          <h1>Pedido Recebido!</h1>
+          <p class="lead-text">Recebemos o seu pedido. Estamos aguardando a compensação do seu pagamento para liberar seu acesso.</p>
+          
+          <div class="next-steps">
+            <h3>Atenção aos Prazos:</h3>
+            <ul>
+              <li><span class="step-num">•</span> <div>Se você pagou via <b>PIX</b>, a liberação costuma ocorrer em até 5 minutos.</div></li>
+              <li><span class="step-num">•</span> <div>Se foi via <b>Boleto Bancário</b>, a compensação leva de 1 a 3 dias úteis.</div></li>
+              <li><span class="step-num">•</span> <div>Assim que o pagamento for aprovado, você receberá um e-mail com o acesso imediato.</div></li>
+            </ul>
+          </div>
+        `;
+        upsellBox.style.display = 'block';
+      } else {
+        card.innerHTML = `
+          <div class="icon-wrapper icon-success">✓</div>
+          <h1>Acesso Liberado</h1>
+          <p class="lead-text">Bem-vindo(a)! Faça login para acessar seus produtos.</p>
+          <a href="cliente-login.html" class="btn-outline">Ir para o Login</a>
+        `;
+      }
 
-        <a href="cliente-login.html" class="btn-primary">Acessar Área de Membros</a>
-      `;
-    } else {
-      card.innerHTML = `
-        <div class="icon-pending">⏳</div>
-        <h1>Pedido Recebido!</h1>
-        <p>Recebemos o seu pedido. Estamos aguardando a compensação do seu pagamento.</p>
+      // 2. TRACKING DO UPSELL
+      if (window.NexusTracker && upsellBox.style.display === 'block') {
+        window.NexusTracker.trackEvent('Upsell_View', { offer: 'Instalação DFY', value: 297 });
         
-        <div class="next-steps">
-          <h3>Atenção:</h3>
-          <ul>
-            <li><span>•</span> Se você pagou via <b>PIX</b>, a liberação costuma ocorrer em até 5 minutos.</li>
-            <li><span>•</span> Se foi via <b>Boleto Bancário</b>, a compensação leva de 1 a 3 dias úteis.</li>
-            <li><span>•</span> Assim que o pagamento for aprovado, você receberá um e-mail com os dados de acesso imediato.</li>
-          </ul>
-        </div>
-      `;
-    }
+        // Fetch do Vídeo do Upsell do Dashboard
+        const productSlug = urlParams.get('product');
+        if (productSlug && window.supabaseClient) {
+          window.supabaseClient.from('products').select('checkout_config').eq('checkout_slug', productSlug).single()
+            .then(({ data }) => {
+              if (data && data.checkout_config && data.checkout_config.upsell_video_url) {
+                let videoUrl = data.checkout_config.upsell_video_url;
+                
+                // Conversão simples para embed se for youtube
+                if (videoUrl.includes('youtube.com/watch?v=')) {
+                  videoUrl = videoUrl.replace('watch?v=', 'embed/');
+                } else if (videoUrl.includes('youtu.be/')) {
+                  videoUrl = videoUrl.replace('youtu.be/', 'youtube.com/embed/');
+                }
+
+                const videoHtml = `
+                  <div class="video-placeholder" style="border:none; padding:0; background:transparent;">
+                    <iframe src="${videoUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="border-radius:12px;"></iframe>
+                  </div>
+                `;
+                const ul = upsellBox.querySelector('.upsell-benefits');
+                if (ul) ul.insertAdjacentHTML('beforebegin', videoHtml);
+              }
+            }).catch(e => console.log('Erro ao carregar video', e));
+        }
+      }
+
+      const btnAccept = document.getElementById('btn-accept-upsell');
+      if (btnAccept) {
+        btnAccept.addEventListener('click', () => {
+          if (window.NexusTracker) {
+            window.NexusTracker.trackEvent('Upsell_Click', { offer: 'Instalação DFY', action: 'accept' });
+          }
+        });
+      }
+
+      const btnDecline = document.getElementById('btn-decline-upsell');
+      if (btnDecline) {
+        btnDecline.addEventListener('click', () => {
+          if (window.NexusTracker) {
+            window.NexusTracker.trackEvent('Upsell_Click', { offer: 'Instalação DFY', action: 'decline' });
+          }
+          window.location.href = 'cliente-login.html';
+        });
+      }
+    });
   </script>
 </body>
 </html>
