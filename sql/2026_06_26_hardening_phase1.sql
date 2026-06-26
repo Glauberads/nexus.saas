@@ -32,6 +32,7 @@ END $$;
 -- O front envia o session_id como filtro. A policy garante que só o registro
 -- com aquele session_id pode ser atualizado por anon.
 -- Isso evita que um atacante altere leads de outras pessoas.
+DROP POLICY IF EXISTS "Anon pode atualizar apenas o proprio lead por session_id" ON public.leads;
 CREATE POLICY "Anon pode atualizar apenas o proprio lead por session_id"
   ON public.leads
   FOR UPDATE
@@ -65,6 +66,7 @@ DROP POLICY IF EXISTS "Anon pode atualizar checkout_sessions"   ON public.checko
 -- e APENAS nos campos de captura de lead (lead_id, status de pré-pagamento).
 -- Mudanças críticas de status (paid, failed) ficam exclusivamente no backend
 -- via Service Role (Edge Functions de webhook que bypassam RLS).
+DROP POLICY IF EXISTS "Anon pode atualizar propria checkout_session" ON public.checkout_sessions;
 CREATE POLICY "Anon pode atualizar propria checkout_session"
   ON public.checkout_sessions
   FOR UPDATE
@@ -77,6 +79,7 @@ CREATE POLICY "Anon pode atualizar propria checkout_session"
 
 -- 2.3 Garantir que INSERT anon continua funcionando
 DROP POLICY IF EXISTS "Anon can insert checkout_sessions" ON public.checkout_sessions;
+DROP POLICY IF EXISTS "Anon pode inserir checkout_sessions" ON public.checkout_sessions;
 CREATE POLICY "Anon pode inserir checkout_sessions"
   ON public.checkout_sessions
   FOR INSERT
