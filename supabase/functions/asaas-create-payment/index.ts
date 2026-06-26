@@ -354,9 +354,6 @@ serve(async (req) => {
        console.error("Failed to write to financial_logs:", logErr);
     }
 
-  } catch (error: any) {
-    console.error('Error creating Asaas payment:', error);
-    
     // Mapeamento de erros seguros (M-07)
     const userFriendlyErrors: Record<string, string> = {
       'Missing required fields: email, billingType, product_slug': 'Dados incompletos. Verifique o formulário.',
