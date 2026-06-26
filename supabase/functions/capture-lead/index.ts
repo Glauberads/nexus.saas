@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { getCorsHeaders } from "../_shared/security.ts"
+import { NexusSRE } from "../_shared/sre.ts"
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
@@ -14,7 +15,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const body = await req.json();
+    let body;
+    try { body = await req.json(); } catch { return new Response('Invalid JSON', { status: 400 }); }
+    
+    const sre = new NexusSRE(supabase, 'capture-lead', req, body);
     const action = body.action;
 
     // AÇÃO 1: Criar Sessão de Checkout (quando carrega a página)
@@ -54,8 +58,11 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: corsHeaders });
 
-  } catch (error: any) {
-    console.error('Error in funnel edge function:', error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: corsHeaders });
+  } catch (err: any) {
+    console.error('Error in capture-lead edge function:', err);
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')||'', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'');
+    const sreFallback = new NexusSRE(supabase, 'capture-lead-fatal', req, {});
+    await sreFallback.sendToDLQ({ error: err.message }, 'Fatal Error in capture-lead', err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 })

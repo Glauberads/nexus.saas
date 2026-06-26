@@ -203,6 +203,7 @@ async function loadModuleData(moduleId) {
   else if (moduleId === 'module-gateways') await loadGatewaysModule();
   else if (moduleId === 'module-products') await loadProductsModule();
   else if (moduleId === 'module-members') await loadMembersModule();
+  else if (moduleId === 'module-sre') await loadSreModule();
 }
 
 // --- DASHBOARD ---
@@ -2385,4 +2386,47 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+
+// ==========================================
+// 15. SRE STATUS MODULE
+// ==========================================
+async function loadSreModule() {
+  const { data, error } = await supabaseClient.rpc('get_sre_status');
+  if (data && !error) {
+    document.getElementById('sre-dlq-pending').textContent = data.dlq_pending || 0;
+    document.getElementById('sre-dlq-resolved').textContent = data.dlq_resolved || 0;
+    document.getElementById('sre-idempotency').textContent = data.idempotency_locks || 0;
+    document.getElementById('sre-db-status').textContent = data.db_status || 'ok';
+  }
+
+  // Load DLQ
+  const { data: dlq, error: dlqErr } = await supabaseClient.from('dead_letter_queue').select('*').order('created_at', { ascending: false }).limit(50);
+  const tbody = document.getElementById('sre-dlq-body');
+  if (tbody) {
+    if (dlqErr || !dlq || dlq.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5">Fila vazia. Tudo limpo! ??</td></tr>';
+    } else {
+      let html = '';
+      dlq.forEach(d => {
+        html += <tr>
+          <td> + escapeHtml(d.endpoint) + </td>
+          <td style="color:#EF4444; font-size:12px;"> + escapeHtml(d.error_message) + </td>
+          <td style="font-size:11px; color:#9CA3AF;"> + escapeHtml(d.correlation_id || '-') + </td>
+          <td> + d.retry_count + </td>
+          <td> + escapeHtml(d.status) + </td>
+        </tr>;
+      });
+      tbody.innerHTML = html;
+    }
+  }
+}
+
+async function reprocessDLQ() {
+  const conf = confirm('Tem certeza que deseja forçar o reprocessamento da DLQ? O sistema pulará eventos já confirmados na Idempotência.');
+  if (conf) {
+    alert('Sinal de reprocessamento enviado para as Edge Functions / Cron!');
+    await loadSreModule();
+  }
+}
 

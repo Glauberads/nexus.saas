@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { NexusSRE } from "../_shared/sre.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Iniciar SRE Telemetry
+    let payload;
+    try { payload = await req.json(); } catch { return new Response('Invalid JSON', { status: 400 }); }
+    const sre = new NexusSRE(supabase, 'asaas-webhook', req, payload);
 
     const encryptionSecret = Deno.env.get('GATEWAY_ENCRYPTION_SECRET');
     if (!encryptionSecret) throw new Error('Encryption secret not configured');
@@ -67,7 +73,6 @@ serve(async (req) => {
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
-    const payload = await req.json();
     const eventType = payload.event;
     const payment = payload.payment;
     
@@ -75,22 +80,10 @@ serve(async (req) => {
       return new Response('Ignored', { status: 200, headers: corsHeaders });
     }
 
-    const criticalEvents = ['PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE', 'PAYMENT_FAILED', 'PAYMENT_CREDIT_CARD_CAPTURE_REFUSED'];
-    const keepForever = criticalEvents.includes(eventType);
-
-    // 1. Idempotência usando UNIQUE CONSTRAINT em gateway_events
-    const { error: insertError } = await supabase.from('gateway_events').insert([{
-      gateway: 'asaas',
-      event_type: eventType,
-      status: 'processed',
-      payload: payload,
-      event_id: payload.id, // Este campo é UNIQUE
-      keep_forever: keepForever
-    }]);
-
-    // Se violar o UNIQUE (código 23505 no Postgres), já processamos. Ignora com 200 pro Asaas parar de mandar.
-    if (insertError && insertError.code === '23505') {
-      console.log(`Duplicate event ${payload.id} ignored.`);
+    // 1. Idempotência usando SRE
+    const isNew = await sre.checkIdempotency(payload.id, 'asaas', eventType, payment.id);
+    if (!isNew) {
+      console.log(`[SRE] Duplicate event ${payload.id} ignored.`);
       return new Response(JSON.stringify({ ignored_duplicate: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
@@ -199,12 +192,12 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-  } catch (error) {
-    console.error('[asaas-webhook] Internal error:', error);
-    // Retorna mensagem genérica — não expõe detalhes internos
-    return new Response(JSON.stringify({ success: false, error: 'Internal server error' }), { 
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
+  } catch (err: any) {
+    console.error('Webhook Fatal Error:', err);
+    // Aqui usamos uma nova instância SRE caso falhe antes do payload
+    const supabase = createClient(Deno.env.get('SUPABASE_URL')||'', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'');
+    const sreFallback = new NexusSRE(supabase, 'asaas-webhook-fatal', req, {});
+    await sreFallback.sendToDLQ({ error: err.message }, 'Fatal Error Webhook', err);
+    return new Response('Internal Server Error', { status: 500 });
   }
 })

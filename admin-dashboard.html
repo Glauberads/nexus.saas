@@ -29,6 +29,7 @@
       <li><a href="#" data-target="module-vendas">💰 Vendas</a></li>
       <li><a href="#" data-target="module-gateways" style="color: #10B981; font-weight: 600;">🏦 Central Financeira</a></li>
       <li><a href="#" data-target="module-fin-logs" style="color: #F59E0B; font-weight: 600;">💰 Logs Financeiros</a></li>
+      <li><a href="#" data-target="module-sre" style="color: #EF4444; font-weight: 600;">🩺 SRE Status</a></li>
       <li><a href="#" data-target="module-campaigns">📢 Campanhas</a></li>
       <li><a href="#" data-target="module-ads">🎯 Meta / Google Ads</a></li>
       <li><a href="#" data-target="module-webhooks">🔌 Webhooks</a></li>
@@ -219,6 +220,53 @@
               <tbody id="analytics-payment-body"><tr><td colspan="3">Carregando...</td></tr></tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <!-- MODULE 1.5: SRE STATUS -->
+      <section id="module-sre" class="module-section" style="display: none;">
+        <h2>🩺 Status & Health (SRE)</h2>
+        <div class="kpi-grid" style="margin-top: 24px;">
+          <div class="kpi-card">
+            <h3>DLQ Pending (Falhas)</h3>
+            <div class="value" id="sre-dlq-pending" style="color:#EF4444;">--</div>
+          </div>
+          <div class="kpi-card">
+            <h3>DLQ Resolved</h3>
+            <div class="value" id="sre-dlq-resolved" style="color:#10B981;">--</div>
+          </div>
+          <div class="kpi-card">
+            <h3>Locks de Idempotência</h3>
+            <div class="value" id="sre-idempotency">--</div>
+          </div>
+          <div class="kpi-card">
+            <h3>Database Status</h3>
+            <div class="value" id="sre-db-status" style="color:#10B981;">--</div>
+          </div>
+        </div>
+        
+        <div class="table-card" style="margin-top:24px;">
+          <div class="table-header">
+            <h3>Fila de Falhas (Dead Letter Queue)</h3>
+            <div>
+              <button class="btn-login" onclick="loadSreModule()">🔄 Atualizar</button>
+              <button class="btn-login" style="background:#EF4444; border-color:#EF4444; margin-left:8px;" onclick="reprocessDLQ()">🔥 Reprocessar Falhas</button>
+            </div>
+          </div>
+          <table class="analytics-table">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Erro</th>
+                <th>Correlation ID</th>
+                <th>Tentativas</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="sre-dlq-body">
+              <tr><td colspan="5">Carregando...</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 

@@ -110,6 +110,7 @@ async function initCheckout(config) {
         product_slug: product.checkout_slug,
         amount: product.price,
         status: 'started',
+        correlation_id: sessionStorage.getItem('nexus_correlation_id'),
         ...utms
       })
     });
@@ -183,7 +184,8 @@ async function captureLead() {
           session_id: currentSessionId,
           session_token: window.currentSessionToken,
           lead_id: currentLeadId,
-          status: 'lead_captured'
+          status: 'lead_captured',
+          correlation_id: sessionStorage.getItem('nexus_correlation_id')
         })
       }).catch(console.error);
     }
@@ -303,6 +305,7 @@ async function processPayment() {
       cpfCnpj: cpfCnpj.replace(/\D/g, ''),
       billingType: selectedPaymentMethod,
       installments,
+      correlation_id: sessionStorage.getItem('nexus_correlation_id'),
       ...(creditCardObj && { creditCard: creditCardObj }),
       ...(creditCardHolderInfoObj && { creditCardHolderInfo: creditCardHolderInfoObj })
     };

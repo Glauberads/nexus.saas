@@ -23,12 +23,21 @@
     CHECKOUT_URL:        'https://membros.glauberads.com.br/c/jy773ql',
   };
 
-  // ── SESSION ID ───────────────────────────────────────────
+  // ── SESSION ID & CORRELATION ID ──────────────────────────
   function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = (Math.random() * 16) | 0;
       return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
     });
+  }
+
+  function getCorrelationId() {
+    let cid = sessionStorage.getItem('nexus_correlation_id');
+    if (!cid) {
+      cid = generateUUID();
+      sessionStorage.setItem('nexus_correlation_id', cid);
+    }
+    return cid;
   }
 
   // ── SHA-256 HASH (para CAPI PII) ─────────────────────────
@@ -633,6 +642,7 @@
             lead_status: 'new',
             quiz_answers: leadData.quizAnswers || null,
             device: this.device,
+            correlation_id: getCorrelationId(),
             ...this.utms,
           }),
         });
