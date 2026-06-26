@@ -234,20 +234,6 @@
 
       // 1. RENDERIZAR MENSAGEM DE SUCESSO/PENDENTE
       if (status === 'paid' || status === 'approved') {
-        
-        // 1.1 TRACKING SEGURO (Evita Duplicidade)
-        const trackKey = 'tracked_' + txidParam;
-        if (!localStorage.getItem(trackKey)) {
-          localStorage.setItem(trackKey, 'true');
-          if (window.NexusTracker && window.NexusTracker.track) {
-            window.NexusTracker.track('Purchase', { 
-              value: parseFloat(valParam), 
-              currency: curParam,
-              order_id: txidParam,
-              product_slug: productSlug
-            });
-          }
-        }
         card.innerHTML = `
           <div class="icon-wrapper icon-success">✓</div>
           <h1>Pagamento Aprovado!</h1>
@@ -288,11 +274,34 @@
         `;
       }
 
-      // 2. FETCH DO UPSELL DINÂMICO
+      // 2. FETCH DO PRODUTO PARA UPSELL E TRACKING ECOMMERCE
       const productSlug = urlParams.get('product');
       if (productSlug && window.supabaseClient) {
-        window.supabaseClient.from('products').select('name, checkout_config').eq('checkout_slug', productSlug).single()
+        window.supabaseClient.from('products').select('id, name, checkout_config').eq('checkout_slug', productSlug).single()
           .then(({ data }) => {
+            // 2.1 TRACKING SEGURO COM ECOMMERCE COMPLETO
+            if (status === 'paid' || status === 'approved') {
+              const trackKey = 'tracked_' + txidParam;
+              if (!localStorage.getItem(trackKey)) {
+                localStorage.setItem(trackKey, 'true');
+                if (window.NexusTracker && window.NexusTracker.track) {
+                  window.NexusTracker.track('Purchase', { 
+                    value: parseFloat(valParam), 
+                    currency: curParam,
+                    order_id: txidParam,
+                    items: [{
+                      item_id: data ? data.id : productSlug,
+                      item_name: data ? data.name : productSlug,
+                      item_category: 'SaaS',
+                      price: parseFloat(valParam),
+                      quantity: 1
+                    }]
+                  });
+                }
+              }
+            }
+
+            // 2.2 RENDERIZAR UPSELL
             if (data && data.checkout_config && data.checkout_config.upsell_enabled) {
               const uc = data.checkout_config;
               

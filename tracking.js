@@ -10,6 +10,7 @@
   // ── CONFIGURAÇÃO ─────────────────────────────────────────
   // Substitua os placeholders pelas suas credenciais reais
   const CONFIG = {
+    DEBUG_TRACKING:      true,                      // Ativar log no console
     META_PIXEL_ID:       '729982690062335',           // Ex: 1234567890
     GA4_ID:              'G-XXXXXXXXXX',            // Ex: G-ABC123DEF4
     GTM_ID:              'GTM-XXXXXXX',             // Ex: GTM-ABC1234
@@ -252,7 +253,18 @@
 
       // Core page tracking
       this.track('PageView', { title: document.title });
-      this.track('ViewContent', { content_name: 'NexusSaaS Landing', value: 0 });
+      this.track('ViewContent', { 
+        content_name: 'NexusSaaS Landing', 
+        value: 197.00,
+        currency: 'BRL',
+        items: [{
+          item_id: 'nexussaas-pro',
+          item_name: 'NexusSaaS Pro',
+          item_category: 'SaaS',
+          price: 197.00,
+          quantity: 1
+        }]
+      });
 
       console.log('%c NexusTracker v2 ✓ ', 'background:#FF6B00;color:#fff;padding:4px 10px;border-radius:4px;font-weight:bold;');
     },
@@ -282,6 +294,10 @@
 
       // GA4 / GTM
       this._trackGA4(eventName, allParams);
+
+      if (CONFIG.DEBUG_TRACKING) {
+        console.log(`[NexusTracker] Event: ${eventName}`, { payload: allParams, eventId, timestamp: allParams.timestamp });
+      }
 
       // Google Ads (specific events)
       this._trackGAds(eventName, params);
@@ -352,7 +368,33 @@
 
       // via dataLayer (GTM)
       window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({ event: ga4EventName, ...params });
+      
+      const dlPayload = { event: ga4EventName };
+      
+      if (['purchase', 'begin_checkout', 'view_item'].includes(ga4EventName)) {
+        dlPayload.ecommerce = {
+          transaction_id: params.order_id || params.transaction_id || undefined,
+          value: parseFloat(params.value || 0),
+          currency: params.currency || 'BRL',
+          items: params.items || []
+        };
+        // Para não duplicar chaves no root, podemos enviar o resto tbm ou deixar apenas no ecommerce
+        if (ga4EventName === 'generate_lead') {
+          dlPayload.lead_id = params.lead_id;
+          dlPayload.page_location = window.location.href;
+          dlPayload.utm_source = params.utm_source;
+          dlPayload.utm_medium = params.utm_medium;
+          dlPayload.utm_campaign = params.utm_campaign;
+        }
+      } else if (ga4EventName === 'generate_lead') {
+        Object.assign(dlPayload, params);
+        dlPayload.page_location = window.location.href;
+      } else {
+        Object.assign(dlPayload, params);
+      }
+      
+      window.dataLayer.push({ ecommerce: null }); // Clear ecommerce object before pushing new one (GA4 best practice)
+      window.dataLayer.push(dlPayload);
 
       // via gtag direct
       if (window.gtag) {

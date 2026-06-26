@@ -52,7 +52,14 @@ async function initCheckout(config) {
     window.NexusTracker.track('InitiateCheckout', { 
       product_slug: productSlug, 
       value: finalPrice, 
-      currency: product.currency || 'BRL'
+      currency: product.currency || 'BRL',
+      items: [{
+        item_id: productSlug,
+        item_name: product.name,
+        item_category: 'SaaS',
+        price: finalPrice,
+        quantity: 1
+      }]
     });
   }
 
