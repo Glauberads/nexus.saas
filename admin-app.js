@@ -191,6 +191,7 @@ async function loadModuleData(moduleId) {
   if (!supabaseClient) return;
   
   if (moduleId === 'module-dashboard') await loadDashboard();
+  else if (moduleId === 'module-analytics') await loadAnalyticsModule();
   else if (moduleId === 'module-leads') await loadLeadsModule();
   else if (moduleId === 'module-funnel') await loadFunnelModule();
   else if (moduleId === 'module-events') await loadEventsModule();
@@ -2241,5 +2242,136 @@ async function loadNotifications() {
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => { if (supabaseClient) loadNotifications(); }, 2000);
 });
+
+// ==========================================
+// MODULE: ANALYTICS EXECUTIVO
+// ==========================================
+let analyticsChartInstance = null;
+
+function getFilterDays() {
+  const filter = document.getElementById('global-date-filter');
+  const val = filter ? filter.value : '30d';
+  if (val === 'hoje') return 1;
+  if (val === '7d') return 7;
+  if (val === '30d') return 30;
+  if (val === '90d') return 90;
+  if (val === '12m') return 365;
+  return 3650; // tudo (10 anos)
+}
+
+async function loadAnalyticsModule() {
+  const days = getFilterDays();
+  
+  // 1. Fetch KPIs
+  const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_executive_kpis', { p_days: days });
+  if (kpiData) {
+    document.getElementById('kpi-rev-period').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpiData.revenue_period || 0);
+    document.getElementById('kpi-rev-today').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpiData.revenue_today || 0);
+    const avgTicket = (kpiData.revenue_period || 0) / (kpiData.purchases_period || 1);
+    document.getElementById('kpi-rev-ticket').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(avgTicket);
+    document.getElementById('kpi-rev-purchases').textContent = kpiData.purchases_period || 0;
+    document.getElementById('kpi-rev-leads').textContent = kpiData.leads_period || 0;
+    document.getElementById('kpi-rev-pending').textContent = kpiData.purchases_pending || 0;
+    
+    const conv1 = kpiData.leads_period > 0 ? ((kpiData.purchases_period / kpiData.leads_period) * 100).toFixed(2) : 0;
+    document.getElementById('kpi-rev-conv1').textContent = conv1 + '%';
+    
+    // Assumiremos uma base de 20% para a demonstração ou cruzar com checkouts
+    document.getElementById('kpi-rev-conv2').textContent = '--';
+  }
+
+  // 2. Fetch Funnel
+  const { data: funnelData } = await supabaseClient.rpc('get_funnel_stats', { p_days: days });
+  if (funnelData) {
+    const fBody = document.getElementById('analytics-funnel-body');
+    let html = '';
+    const steps = [
+      { id: 'page_view', name: 'Visitas (Landing)' },
+      { id: 'generate_lead', name: 'Leads Gerados' },
+      { id: 'begin_checkout', name: 'Início de Checkout' },
+      { id: 'purchase', name: 'Compras' }
+    ];
+    let previousVal = funnelData.page_view || 0;
+    steps.forEach(step => {
+      const val = funnelData[step.id] || 0;
+      const conv = previousVal > 0 ? ((val / previousVal) * 100).toFixed(1) : 0;
+      html += `<tr><td>${step.name}</td><td>${val}</td><td>${step.id === 'page_view' ? '-' : conv + '%'}</td></tr>`;
+      previousVal = val;
+      if (step.id === 'begin_checkout' && kpiData) {
+        const convCheckout = val > 0 ? ((kpiData.purchases_period / val) * 100).toFixed(2) : 0;
+        document.getElementById('kpi-rev-conv2').textContent = convCheckout + '%';
+      }
+    });
+    fBody.innerHTML = html;
+  }
+
+  // 3. Fetch UTMs
+  const { data: utmData } = await supabaseClient.rpc('get_utm_acquisition', { p_days: days });
+  if (utmData) {
+    const uBody = document.getElementById('analytics-utm-body');
+    if (utmData.length === 0 || !utmData[0].source) uBody.innerHTML = '<tr><td colspan="2">Sem dados</td></tr>';
+    else uBody.innerHTML = utmData.map(u => `<tr><td>${escapeHtml(u.source)}</td><td>${u.leads}</td></tr>`).join('');
+  }
+
+  // 4. Fetch Payments Split
+  const { data: payData } = await supabaseClient.rpc('get_financial_split', { p_days: days });
+  if (payData) {
+    const pBody = document.getElementById('analytics-payment-body');
+    if (payData.length === 0 || !payData[0].method) pBody.innerHTML = '<tr><td colspan="3">Sem dados</td></tr>';
+    else pBody.innerHTML = payData.map(p => `<tr><td>${escapeHtml(p.method)}</td><td>${p.qty}</td><td>${new Intl.NumberFormat('pt-BR', {style:'currency',currency:'BRL'}).format(p.total)}</td></tr>`).join('');
+  }
+
+  // 5. Fetch Chart Data
+  const { data: chartData } = await supabaseClient.rpc('get_charts_data', { p_days: days });
+  if (chartData && chartData.revenue && chartData.leads) {
+    const ctx = document.getElementById('analyticsEvolutionChart');
+    if (ctx) {
+      if (analyticsChartInstance) analyticsChartInstance.destroy();
+      const labels = chartData.revenue.map(d => d.day);
+      const revData = chartData.revenue.map(d => d.value);
+      const leadsData = chartData.leads.map(d => d.value);
+      analyticsChartInstance = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Receita (R$)', data: revData, borderColor: '#10b981', tension: 0.4, yAxisID: 'y' },
+            { label: 'Leads', data: leadsData, borderColor: '#FF6B00', tension: 0.4, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            y: { type: 'linear', display: true, position: 'left' },
+            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    }
+  }
+}
+
+// Binds export
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-refresh-analytics')?.addEventListener('click', () => loadAnalyticsModule());
+  document.getElementById('btn-export-pdf')?.addEventListener('click', () => window.print());
+  document.getElementById('btn-export-csv')?.addEventListener('click', async () => {
+    // Generate simple CSV
+    const days = getFilterDays();
+    const { data: kpiData } = await supabaseClient.rpc('get_executive_kpis', { p_days: days });
+    let csv = 'Receita Total,Receita Hoje,Ticket Medio,Total Compras,Leads\n';
+    if(kpiData) {
+      csv += `${kpiData.revenue_period},${kpiData.revenue_today},${kpiData.revenue_period/kpiData.purchases_period},${kpiData.purchases_period},${kpiData.leads_period}\n`;
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics_${days}d.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  });
+});
+
 
 

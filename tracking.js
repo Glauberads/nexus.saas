@@ -12,7 +12,7 @@
   const CONFIG = {
     DEBUG_TRACKING:      true,                      // Ativar log no console
     META_PIXEL_ID:       '729982690062335',           // Ex: 1234567890
-    GA4_ID:              'G-XXXXXXXXXX',            // Ex: G-ABC123DEF4
+    GA4_ID:              'G-Q0WXJZP1PX',            // Ex: G-ABC123DEF4
     GTM_ID:              'GTM-XXXXXXX',             // Ex: GTM-ABC1234
     CLARITY_ID:          'SEU_CLARITY_ID',          // Ex: abcde12345
     GADS_CONVERSION_ID:  'AW-XXXXXXXXX',            // Ex: AW-123456789
@@ -396,25 +396,13 @@
       window.dataLayer.push({ ecommerce: null }); // Clear ecommerce object before pushing new one (GA4 best practice)
       window.dataLayer.push(dlPayload);
 
-      // via gtag direct
-      if (window.gtag) {
-        gtag('event', ga4EventName, {
-          ...params,
-          currency: params?.currency || 'BRL',
-          value: params?.value || (eventName === 'Purchase' || eventName === 'InitiateCheckout' ? 0 : undefined),
-        });
-      }
+      // via gtag direct removido para usar apenas GTM
     },
 
     // ── GOOGLE ADS ─────────────────────────────────────────
     _trackGAds(eventName, params) {
-      if (!window.gtag) return;
-      if (eventName === 'Lead') {
-        gtag('event', 'conversion', { send_to: `${CONFIG.GADS_CONVERSION_ID}/${CONFIG.GADS_LEAD_LABEL}` });
-      }
-      if (eventName === 'InitiateCheckout') {
-        gtag('event', 'conversion', { send_to: `${CONFIG.GADS_CONVERSION_ID}/${CONFIG.GADS_CHECKOUT_LABEL}` });
-      }
+      // Removido: Conversões do Google Ads devem ser configuradas exclusivamente dentro do Google Tag Manager
+      // lendo os eventos do dataLayer (ex: generate_lead, begin_checkout, purchase)
     },
 
     // ── META CAPI RELAY ────────────────────────────────────

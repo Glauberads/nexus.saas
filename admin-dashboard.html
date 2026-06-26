@@ -23,6 +23,7 @@
     
     <ul class="sidebar-menu">
       <li><a href="#" class="active" data-target="module-dashboard">📊 Dashboard</a></li>
+      <li><a href="#" data-target="module-analytics" style="color: #60A5FA; font-weight: 600;">📈 Analytics Executivo</a></li>
       <li><a href="#" data-target="module-leads">👥 Leads (CRM)</a></li>
       <li><a href="#" data-target="module-funnel">📈 Funil</a></li>
       <li><a href="#" data-target="module-vendas">💰 Vendas</a></li>
@@ -81,6 +82,8 @@
           <option value="hoje">Hoje</option>
           <option value="7d">Últimos 7 Dias</option>
           <option value="30d">Últimos 30 Dias</option>
+          <option value="90d">Últimos 90 Dias</option>
+          <option value="12m">Últimos 12 Meses</option>
           <option value="tudo" selected>Todo o Período</option>
         </select>
         <span class="badge success hide-mobile">Realtime Ativo</span>
@@ -153,6 +156,68 @@
             <div style="height: 200px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
               <canvas id="temperatureChart"></canvas>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODULE 1.5: ANALYTICS EXECUTIVO -->
+      <section id="module-analytics" class="module-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+          <h2>📊 Analytics Executivo</h2>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-export-csv" class="btn" style="background: var(--bg-card); border: 1px solid var(--border);">⬇ CSV</button>
+            <button id="btn-export-pdf" class="btn" style="background: var(--bg-card); border: 1px solid var(--border);">🖨 Imprimir PDF</button>
+            <button id="btn-refresh-analytics" class="btn btn-primary">↻ Atualizar</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+          <div class="kpi-card"><h3>💰 Receita Período</h3><div class="kpi-value" id="kpi-rev-period">R$ 0,00</div></div>
+          <div class="kpi-card"><h3>💸 Receita Hoje</h3><div class="kpi-value" id="kpi-rev-today">R$ 0,00</div></div>
+          <div class="kpi-card"><h3>💳 Ticket Médio</h3><div class="kpi-value" id="kpi-rev-ticket">R$ 0,00</div></div>
+          <div class="kpi-card"><h3>🛍 Total Compras</h3><div class="kpi-value" id="kpi-rev-purchases">0</div></div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+          <div class="kpi-card"><h3>👥 Leads Gerados</h3><div class="kpi-value" id="kpi-rev-leads">0</div></div>
+          <div class="kpi-card"><h3>🎯 Conv. Lead > Compra</h3><div class="kpi-value" id="kpi-rev-conv1">0%</div></div>
+          <div class="kpi-card"><h3>🛒 Conv. Checkout > Compra</h3><div class="kpi-value" id="kpi-rev-conv2">0%</div></div>
+          <div class="kpi-card"><h3>⏳ Compras Pendentes</h3><div class="kpi-value" id="kpi-rev-pending">0</div></div>
+        </div>
+
+        <div class="charts-grid" style="margin-bottom: 24px;">
+          <div class="chart-card">
+            <h3>Evolução de Receita e Leads</h3>
+            <div style="height: 300px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+              <canvas id="analyticsEvolutionChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" style="margin-bottom: 24px;">
+          <div class="table-card" style="margin: 0;">
+            <div class="table-header"><h3>Funil de Conversão</h3></div>
+            <table class="analytics-table">
+              <thead><tr><th>Etapa</th><th>Qtd</th><th>Conversão</th></tr></thead>
+              <tbody id="analytics-funnel-body"><tr><td colspan="3">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="table-card" style="margin: 0;">
+            <div class="table-header"><h3>Aquisição (UTMs)</h3></div>
+            <table class="analytics-table">
+              <thead><tr><th>Origem</th><th>Leads</th></tr></thead>
+              <tbody id="analytics-utm-body"><tr><td colspan="2">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="kpi-grid" style="margin-bottom: 24px;">
+          <div class="table-card" style="margin: 0;">
+            <div class="table-header"><h3>Métodos de Pagamento</h3></div>
+            <table class="analytics-table">
+              <thead><tr><th>Método</th><th>Qtd</th><th>Total</th></tr></thead>
+              <tbody id="analytics-payment-body"><tr><td colspan="3">Carregando...</td></tr></tbody>
+            </table>
           </div>
         </div>
       </section>
