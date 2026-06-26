@@ -1,6 +1,26 @@
+// ─── SEGURANÇA: Helper para prevenir XSS ─────────────────────────────────────
+// SEMPRE usar esta função ao renderizar dados vindos do banco via innerHTML.
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+function safeJsonDisplay(obj, maxLength = 200) {
+  if (!obj) return '-';
+  try {
+    const str = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+    const truncated = str.length > maxLength ? str.substring(0, maxLength) + '...' : str;
+    return escapeHtml(truncated);
+  } catch { return '[Erro ao exibir]'; }
+}
 /**
  * admin-app.js
- * Lida com o roteamento interno (SPA), proteção de autenticação e renderização de dados reais do Supabase.
+ * Lida com o roteamento interno (SPA), proteÃ§Ã£o de autenticaÃ§Ã£o e renderizaÃ§Ã£o de dados reais do Supabase.
  */
 
 let supabaseClient = null;
@@ -47,10 +67,10 @@ async function verifyAuth() {
   
   const { data: { session } } = await supabaseClient.auth.getSession();
   
-  // Verifica se não há sessão ou se o e-mail não é o autorizado
+  // Verifica se nÃ£o hÃ¡ sessÃ£o ou se o e-mail nÃ£o Ã© o autorizado
   if (!session || session.user.email !== 'suporteglauberr@gmail.com') {
     if (session) {
-      await supabaseClient.auth.signOut(); // forçar logout se logou com conta errada
+      await supabaseClient.auth.signOut(); // forÃ§ar logout se logou com conta errada
     }
     window.location.href = 'admin-login.html';
     return;
@@ -216,25 +236,25 @@ async function loadDashboard() {
       const topLeads = hotLeads.sort((a,b) => b.lead_score - a.lead_score).slice(0, 10);
       
       if (topLeads.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum lead quente encontrado neste período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum lead quente encontrado neste perÃ­odo.</td></tr>';
       } else {
         topLeads.forEach(l => {
           const tr = document.createElement('tr');
-          const badgeClass = l.lead_tier ? l.lead_tier.toLowerCase().replace(' ', '-') : 'frio';
+          const badgeClass = escapeHtml(l.lead_tier ? l.lead_tier.toLowerCase().replace(' ', '-') : 'frio');
           tr.innerHTML = `
-            <td>${l.name || 'Desconhecido'}</td>
-            <td>${l.email || l.whatsapp || '-'}</td>
-            <td>${l.utm_source || 'direto'}</td>
-            <td><strong>${l.lead_score || 0}</strong></td>
-            <td><span class="badge ${badgeClass}">${l.lead_tier || '-'}</span></td>
-            <td class="clickable" onclick="openLeadDrawer('${l.id}')">Ver →</td>
+            <td>${escapeHtml(l.name || 'Desconhecido')}</td>
+            <td>${escapeHtml(l.email || l.whatsapp || '-')}</td>
+            <td>${escapeHtml(l.utm_source || 'direto')}</td>
+            <td><strong>${escapeHtml(String(l.lead_score || 0))}</strong></td>
+            <td><span class="badge ${badgeClass}">${escapeHtml(l.lead_tier || '-')}</span></td>
+            <td class="clickable" onclick="openLeadDrawer('${escapeHtml(l.id)}')">Ver &rarr;</td>
           `;
           tbody.appendChild(tr);
         });
       }
     }
 
-    // WIDGET: Gráficos Chart.js
+    // WIDGET: GrÃ¡ficos Chart.js
     renderCharts(sessions, leads);
 
   } catch (err) {
@@ -243,7 +263,7 @@ async function loadDashboard() {
 }
 
 function renderCharts(sessions, leads) {
-  // Tráfego
+  // TrÃ¡fego
   const sourceCount = {};
   (sessions || []).forEach(s => {
     const src = s.utm_source || 'Direto / Sem UTM';
@@ -258,7 +278,7 @@ function renderCharts(sessions, leads) {
       data: {
         labels: Object.keys(sourceCount),
         datasets: [{
-          label: 'Sessões',
+          label: 'SessÃµes',
           data: Object.values(sourceCount),
           backgroundColor: '#FF6B00',
           borderRadius: 4
@@ -304,20 +324,20 @@ async function loadLeadsModule() {
   if (tbody) {
     tbody.innerHTML = '';
     if (!leads || leads.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum lead encontrado neste período.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhum lead encontrado neste perÃ­odo.</td></tr>';
       return;
     }
     
     leads.forEach(l => {
       const tr = document.createElement('tr');
-      const badgeClass = l.lead_tier ? l.lead_tier.toLowerCase().replace(' ', '-') : 'frio';
+      const badgeClass = escapeHtml(l.lead_tier ? l.lead_tier.toLowerCase().replace(' ', '-') : 'frio');
       tr.innerHTML = `
-        <td>${l.name || '-'}</td>
-        <td>${l.email || '-'}</td>
-        <td>${l.whatsapp || '-'}</td>
-        <td><span class="badge ${badgeClass}">${l.lead_tier || 'Frio'}</span></td>
-        <td>${new Date(l.created_at).toLocaleDateString('pt-BR')}</td>
-        <td class="clickable" onclick="openLeadDrawer('${l.id}')">Ver →</td>
+        <td>${escapeHtml(l.name || '-')}</td>
+        <td>${escapeHtml(l.email || '-')}</td>
+        <td>${escapeHtml(l.whatsapp || '-')}</td>
+        <td><span class="badge ${badgeClass}">${escapeHtml(l.lead_tier || 'Frio')}</span></td>
+        <td>${escapeHtml(new Date(l.created_at).toLocaleDateString('pt-BR'))}</td>
+        <td class="clickable" onclick="openLeadDrawer('${escapeHtml(l.id)}')">Ver &rarr;</td>
       `;
       tbody.appendChild(tr);
     });
@@ -357,11 +377,11 @@ async function loadFunnelModule() {
     document.getElementById('funnel-purchase').textContent = pur;
     
     container.innerHTML = `
-      <strong>Conversão Global:</strong> ${vc > 0 ? ((pur/vc)*100).toFixed(2) : 0}%<br/>
-      <strong>View → Lead:</strong> ${vc > 0 ? ((leads/vc)*100).toFixed(2) : 0}%<br/>
-      <strong>Lead → Purchase:</strong> ${leads > 0 ? ((pur/leads)*100).toFixed(2) : 0}%<br/>
+      <strong>ConversÃ£o Global:</strong> ${vc > 0 ? ((pur/vc)*100).toFixed(2) : 0}%<br/>
+      <strong>View â†’ Lead:</strong> ${vc > 0 ? ((leads/vc)*100).toFixed(2) : 0}%<br/>
+      <strong>Lead â†’ Purchase:</strong> ${leads > 0 ? ((pur/leads)*100).toFixed(2) : 0}%<br/>
       <br/>
-      (Visualização detalhada em breve)
+      (VisualizaÃ§Ã£o detalhada em breve)
     `;
   }
 }
@@ -380,7 +400,7 @@ function renderEventsFeed(events) {
   if (!tbody) return;
   
   if (events.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhum evento no período.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhum evento no perÃ­odo.</td></tr>';
     return;
   }
   
@@ -401,7 +421,7 @@ function prependEventToFeed(evt, tbody) {
   `;
   tbody.prepend(tr);
   
-  // Animação de entrada se for novo
+  // AnimaÃ§Ã£o de entrada se for novo
   tr.animate([
     { backgroundColor: 'rgba(255, 107, 0, 0.2)' },
     { backgroundColor: 'transparent' }
@@ -425,10 +445,10 @@ async function openLeadDrawer(leadOrId) {
   const { data: lead } = await supabaseClient.from('leads').select('*').eq('id', leadId).single();
   if (!lead) return;
 
-  document.getElementById('drawer-name').textContent = lead.name || 'Lead Anônimo';
+  document.getElementById('drawer-name').textContent = lead.name || 'Lead AnÃ´nimo';
   document.getElementById('drawer-email').textContent = `${lead.email || ''} | ${lead.whatsapp || ''}`;
   
-  // Buscar Múltiplas Fontes (Super Timeline)
+  // Buscar MÃºltiplas Fontes (Super Timeline)
   const [{ data: events }, { data: journey }, { data: msgs }, { data: purchases }] = await Promise.all([
     supabaseClient.from('events').select('*').eq('lead_id', leadId),
     supabaseClient.from('lead_journey').select('*').eq('lead_id', leadId),
@@ -438,10 +458,10 @@ async function openLeadDrawer(leadOrId) {
 
   let timeline = [];
   
-  if (events) events.forEach(e => timeline.push({ time: new Date(e.created_at), type: 'Event', title: e.event_name, detail: JSON.stringify(e.payload), icon: '⚡', color: 'var(--text-muted)' }));
-  if (journey) journey.forEach(j => timeline.push({ time: new Date(j.created_at), type: 'Journey', title: j.action_type, detail: JSON.stringify(j.action_details), icon: '📍', color: 'var(--accent)' }));
-  if (msgs) msgs.forEach(m => timeline.push({ time: new Date(m.created_at), type: 'WhatsApp', title: m.direction === 'inbound' ? 'Resposta Recebida' : 'Msg Enviada', detail: m.message || m.automation_name, icon: '💬', color: m.direction === 'inbound' ? 'var(--success)' : '#25D366' }));
-  if (purchases) purchases.forEach(p => timeline.push({ time: new Date(p.created_at), type: 'Purchase', title: 'Compra Aprovada', detail: `Valor: ${p.amount} (${p.payment_method})`, icon: '💰', color: '#10b981' }));
+  if (events) events.forEach(e => timeline.push({ time: new Date(e.created_at), type: 'Event', title: e.event_name, detail: JSON.stringify(e.payload), icon: 'âš¡', color: 'var(--text-muted)' }));
+  if (journey) journey.forEach(j => timeline.push({ time: new Date(j.created_at), type: 'Journey', title: j.action_type, detail: JSON.stringify(j.action_details), icon: 'ðŸ“', color: 'var(--accent)' }));
+  if (msgs) msgs.forEach(m => timeline.push({ time: new Date(m.created_at), type: 'WhatsApp', title: m.direction === 'inbound' ? 'Resposta Recebida' : 'Msg Enviada', detail: m.message || m.automation_name, icon: 'ðŸ’¬', color: m.direction === 'inbound' ? 'var(--success)' : '#25D366' }));
+  if (purchases) purchases.forEach(p => timeline.push({ time: new Date(p.created_at), type: 'Purchase', title: 'Compra Aprovada', detail: `Valor: ${p.amount} (${p.payment_method})`, icon: 'ðŸ’°', color: '#10b981' }));
 
   // Ordenar cronologicamente
   timeline.sort((a, b) => a.time - b.time);
@@ -466,7 +486,7 @@ async function openLeadDrawer(leadOrId) {
       timelineContainer.appendChild(div);
     });
   } else {
-    timelineContainer.innerHTML = '<div class="timeline-item"><div class="timeline-desc">Nenhuma ação registrada além da criação.</div></div>';
+    timelineContainer.innerHTML = '<div class="timeline-item"><div class="timeline-desc">Nenhuma aÃ§Ã£o registrada alÃ©m da criaÃ§Ã£o.</div></div>';
   }
 }
 
@@ -670,7 +690,7 @@ function setupRealtime() {
       if (currentModule === 'module-automations') {
         const tbody = document.getElementById('automations-tbody');
         if (tbody) {
-          if (tbody.innerHTML.includes('Nenhuma automação') || tbody.innerHTML.includes('Carregando')) {
+          if (tbody.innerHTML.includes('Nenhuma automaÃ§Ã£o') || tbody.innerHTML.includes('Carregando')) {
              tbody.innerHTML = '';
           }
           prependAutomationLog(payload.new, tbody, true);
@@ -725,7 +745,7 @@ window.exportLeadsToCSV = async function() {
   if (!supabaseClient) return;
 
   try {
-    showToast("Preparando exportação...");
+    showToast("Preparando exportaÃ§Ã£o...");
     
     // Puxa todos os leads respeitando o filtro de data atual
     let query = supabaseClient.from('leads').select('*').order('created_at', { ascending: false });
@@ -739,12 +759,12 @@ window.exportLeadsToCSV = async function() {
       return;
     }
     
-    // Cabeçalhos do CSV
-    const headers = ['Nome', 'Email', 'WhatsApp', 'Origem', 'Campanha', 'Score', 'Temperatura', 'Status', 'Data de Criação'];
+    // CabeÃ§alhos do CSV
+    const headers = ['Nome', 'Email', 'WhatsApp', 'Origem', 'Campanha', 'Score', 'Temperatura', 'Status', 'Data de CriaÃ§Ã£o'];
     
     // Converte os dados
     const csvRows = [];
-    csvRows.push(headers.join(',')); // Adiciona cabeçalhos
+    csvRows.push(headers.join(',')); // Adiciona cabeÃ§alhos
     
     leads.forEach(l => {
       const row = [
@@ -776,7 +796,7 @@ window.exportLeadsToCSV = async function() {
     link.click();
     document.body.removeChild(link);
     
-    showToast("Exportação concluída com sucesso!");
+    showToast("ExportaÃ§Ã£o concluÃ­da com sucesso!");
     
   } catch (err) {
     console.error("Erro ao exportar:", err);
@@ -812,16 +832,16 @@ async function loadGeneralLogsModule(isLoadMore = false) {
 
     let unifiedLogs = [];
 
-    // Normalização: events
+    // NormalizaÃ§Ã£o: events
     (resEvents.data || []).forEach(e => {
       unifiedLogs.push({
         id: e.id, time: e.created_at, origin: 'Frontend', originClass: 'src-frontend', type: 'Event: ' + e.event_name, category: 'frontend',
-        desc: `Sessão: ${e.session_id ? e.session_id.substring(0,8) : 'N/A'} | Page: ${e.url || '-'}`,
+        desc: `SessÃ£o: ${e.session_id ? e.session_id.substring(0,8) : 'N/A'} | Page: ${e.url || '-'}`,
         status: '200 OK', json: e.params || {}
       });
     });
 
-    // Normalização: webhook_logs
+    // NormalizaÃ§Ã£o: webhook_logs
     (resWebhooks.data || []).forEach(w => {
       const isErr = w.response_status !== 200;
       unifiedLogs.push({
@@ -831,7 +851,7 @@ async function loadGeneralLogsModule(isLoadMore = false) {
       });
     });
 
-    // Normalização: lead_journey
+    // NormalizaÃ§Ã£o: lead_journey
     (resJourney.data || []).forEach(j => {
       unifiedLogs.push({
         id: j.id, time: j.created_at, origin: 'Database', originClass: 'src-db', type: 'Journey: ' + j.action_type, category: 'lead',
@@ -840,7 +860,7 @@ async function loadGeneralLogsModule(isLoadMore = false) {
       });
     });
 
-    // Normalização: purchases
+    // NormalizaÃ§Ã£o: purchases
     (resPurchases.data || []).forEach(p => {
       unifiedLogs.push({
         id: p.id, time: p.created_at, origin: 'Backend', originClass: 'src-db', type: 'Purchase Insert', category: 'purchase',
@@ -849,7 +869,7 @@ async function loadGeneralLogsModule(isLoadMore = false) {
       });
     });
 
-    // Normalização: leads
+    // NormalizaÃ§Ã£o: leads
     (resLeads.data || []).forEach(l => {
       unifiedLogs.push({
         id: l.id, time: l.created_at, origin: 'CRM', originClass: 'src-db', type: 'New Lead', category: 'lead',
@@ -858,7 +878,7 @@ async function loadGeneralLogsModule(isLoadMore = false) {
       });
     });
 
-    // Ordenação global
+    // OrdenaÃ§Ã£o global
     unifiedLogs.sort((a, b) => new Date(b.time) - new Date(a.time));
 
     renderGeneralLogs(unifiedLogs, isLoadMore);
@@ -923,14 +943,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Configurar Botão Load More
+  // Configurar BotÃ£o Load More
   const btnLoadMore = document.getElementById('btn-load-more-logs');
   if (btnLoadMore) {
     btnLoadMore.addEventListener('click', () => {
       generalLogsOffset += GENERAL_LOGS_LIMIT;
-      // Nota: numa implementação real, generalLogsOffset entraria no .range(offset, offset + limit)
-      // Como o design aprovado pediu "apenas os ultimos 100", o load more está como placeholder visual
-      showToast("Carregar histórico profundo requer paginação avançada.");
+      // Nota: numa implementaÃ§Ã£o real, generalLogsOffset entraria no .range(offset, offset + limit)
+      // Como o design aprovado pediu "apenas os ultimos 100", o load more estÃ¡ como placeholder visual
+      showToast("Carregar histÃ³rico profundo requer paginaÃ§Ã£o avanÃ§ada.");
     });
   }
 });
@@ -941,18 +961,18 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadAutomationsModule() {
   if (!supabaseClient) return;
 
-  // Carrega configurações salvas de webhooks do n8n
+  // Carrega configuraÃ§Ãµes salvas de webhooks do n8n
   document.getElementById('input-n8n-hotlead').value = localStorage.getItem('n8n_webhook_hot_lead') || '';
   document.getElementById('input-n8n-recovery').value = localStorage.getItem('n8n_webhook_recovery') || '';
   document.getElementById('input-n8n-purchase').value = localStorage.getItem('n8n_webhook_purchase') || '';
 
-  // Busca histórico de execuções
+  // Busca histÃ³rico de execuÃ§Ãµes
   let query = supabaseClient.from('automation_logs').select('*').order('created_at', { ascending: false }).limit(50);
   query = applyDateFilter(query);
   const { data: logs, error } = await query;
   
   if (error) {
-    console.error("Erro ao carregar automações:", error);
+    console.error("Erro ao carregar automaÃ§Ãµes:", error);
     return;
   }
 
@@ -974,7 +994,7 @@ async function loadAutomationsModule() {
   if (!tbody) return;
 
   if (!logs || logs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma automação disparada ainda.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma automaÃ§Ã£o disparada ainda.</td></tr>';
     return;
   }
 
@@ -1033,7 +1053,7 @@ window.testAutomation = async function() {
     return;
   }
 
-  showToast("Enviando teste de automação...");
+  showToast("Enviando teste de automaÃ§Ã£o...");
 
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.NexusTracker.config;
 
@@ -1064,10 +1084,10 @@ window.testAutomation = async function() {
 
     const data = await res.json();
     if (res.ok && data.success) {
-      if (data.skipped) showToast("Automação pulada (Prevenção de Duplicidade)");
-      else showToast("Automação disparada com sucesso para o n8n!");
+      if (data.skipped) showToast("AutomaÃ§Ã£o pulada (PrevenÃ§Ã£o de Duplicidade)");
+      else showToast("AutomaÃ§Ã£o disparada com sucesso para o n8n!");
     } else {
-      showToast("Falha ao disparar automação: " + (data.error || res.statusText), true);
+      showToast("Falha ao disparar automaÃ§Ã£o: " + (data.error || res.statusText), true);
     }
   } catch (err) {
     console.error("Erro disparando edge function:", err);
@@ -1084,7 +1104,7 @@ let crmFilter = 'tudo';
 async function loadWhatsappCrmModule() {
   if (!supabaseClient) return;
 
-  // Carregar Leads para o Kanban (Últimos 30 dias ou max 200)
+  // Carregar Leads para o Kanban (Ãšltimos 30 dias ou max 200)
   const date30d = new Date();
   date30d.setDate(date30d.getDate() - 30);
 
@@ -1161,17 +1181,17 @@ function createKanbanCard(lead) {
   card.dataset.id = lead.id;
 
   const scoreBadge = lead.lead_score > 75 
-    ? `<span class="k-score-badge hot">🔥 ${lead.lead_score}</span>` 
-    : `<span class="k-score-badge">⭐ ${lead.lead_score || 0}</span>`;
+    ? `<span class="k-score-badge hot">ðŸ”¥ ${lead.lead_score}</span>` 
+    : `<span class="k-score-badge">â­ ${lead.lead_score || 0}</span>`;
 
   card.innerHTML = `
     <div class="k-card-title">
-      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${lead.name || 'Lead Anônimo'}</span>
+      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${lead.name || 'Lead AnÃ´nimo'}</span>
       ${scoreBadge}
     </div>
     <div class="k-card-sub">${lead.whatsapp || lead.email || 'Sem contato'}</div>
     <div class="k-card-meta">
-      <span>${lead.utm_source || 'orgânico'}</span>
+      <span>${lead.utm_source || 'orgÃ¢nico'}</span>
       <span>${new Date(lead.last_activity_at || lead.created_at).toLocaleDateString('pt-BR')}</span>
     </div>
   `;
@@ -1243,7 +1263,7 @@ function setupKanbanDragAndDrop() {
           }
         } catch (err) {
           console.error("Erro ao mover lead:", err);
-          showToast("Erro ao salvar mudança no banco.", true);
+          showToast("Erro ao salvar mudanÃ§a no banco.", true);
         }
       }
     });
@@ -1422,12 +1442,12 @@ async function loadAdsModule() {
 }
 
 // ==========================================
-// 12.2. GATEWAYS DISPONÍVEIS (ENTERPRISE)
+// 12.2. GATEWAYS DISPONÃVEIS (ENTERPRISE)
 // ==========================================
 async function loadGatewaysModule() {
   if (!supabaseClient) return;
 
-  // KPIs Simulados/Básicos para demonstração inicial (será enriquecido depois)
+  // KPIs Simulados/BÃ¡sicos para demonstraÃ§Ã£o inicial (serÃ¡ enriquecido depois)
   const { data: events } = await supabaseClient.from('gateway_events')
     .select('*')
     .order('created_at', { ascending: false })
@@ -1457,7 +1477,7 @@ async function loadGatewaysModule() {
         <td>${new Date(e.created_at).toLocaleString('pt-BR')}</td>
         <td style="text-transform: capitalize;">${e.gateway}</td>
         <td style="font-family: monospace; font-size: 11px;">${e.event_type}</td>
-        <td style="color: ${color}; font-weight: 600;">${e.status === 'processed' ? 'Sim' : 'Não'}</td>
+        <td style="color: ${color}; font-weight: 600;">${e.status === 'processed' ? 'Sim' : 'NÃ£o'}</td>
         <td>
           <button style="background: none; border: 1px solid var(--border); color: var(--text-secondary); padding: 4px 8px; border-radius: 4px; cursor: pointer;" onclick="alert('Payload:\\n' + JSON.stringify(${JSON.stringify(e.payload).replace(/'/g, "\\'")}, null, 2))">Ver Payload</button>
         </td>
@@ -1535,14 +1555,14 @@ window.saveGatewaySettings = async function() {
     
     const result = await res.json();
     if (result.success) {
-      alert('Configurações salvas com sucesso!');
+      alert('ConfiguraÃ§Ãµes salvas com sucesso!');
       document.getElementById('modal-gateway-settings').style.display = 'none';
       await loadGatewaysModule();
     } else {
       alert('Erro: ' + result.error);
     }
   } catch (err) {
-    alert('Erro ao salvar configurações.');
+    alert('Erro ao salvar configuraÃ§Ãµes.');
   }
 }
 
@@ -1561,17 +1581,17 @@ window.testGatewayConnection = async function() {
     
     const result = await res.json();
     if (result.success) {
-      alert('✅ ' + result.message);
+      alert('âœ… ' + result.message);
     } else {
-      alert('❌ Erro: ' + result.error);
+      alert('âŒ Erro: ' + result.error);
     }
   } catch (err) {
-    alert('Erro ao testar conexão.');
+    alert('Erro ao testar conexÃ£o.');
   }
 }
 
 window.cleanOldLogs = async function() {
-  if (!confirm('Deseja limpar todos os logs de webhooks com mais de 30 dias? Eventos críticos (pagamentos falhos, estornos) serão mantidos se marcados no banco.')) return;
+  if (!confirm('Deseja limpar todos os logs de webhooks com mais de 30 dias? Eventos crÃ­ticos (pagamentos falhos, estornos) serÃ£o mantidos se marcados no banco.')) return;
   
   try {
     const thirtyDaysAgo = new Date();
@@ -1592,7 +1612,7 @@ window.cleanOldLogs = async function() {
 }
 
 // ==========================================
-// 12.1. PRODUTOS (CMS) E PREÇOS
+// 12.1. PRODUTOS (CMS) E PREÃ‡OS
 // ==========================================
 let currentEditingProductId = null;
 
@@ -1646,14 +1666,14 @@ async function loadProductsModule() {
 
     const pVersions = versions ? versions.filter(v => v.product_id === p.id) : [];
     const currentV = pVersions.find(v => v.is_current) || pVersions[0];
-    const vText = currentV ? currentV.version : 'Sem versão';
+    const vText = currentV ? currentV.version : 'Sem versÃ£o';
 
     tr.innerHTML = `
       <td>
         <img src="${p.thumbnail_url || 'https://via.placeholder.com/60x60/161616/8B5CF6?text=' + p.name.charAt(0)}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
       </td>
       <td>
-        <div style="font-weight: 600;">${p.name} ${p.is_featured ? '⭐' : ''}</div>
+        <div style="font-weight: 600;">${p.name} ${p.is_featured ? 'â­' : ''}</div>
         <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">/${p.slug}</div>
       </td>
       <td style="font-weight: 600;">${formatter.format(pPrice)}</td>
@@ -1665,10 +1685,10 @@ async function loadProductsModule() {
       <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${p.status}</td>
       <td>
         <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 200px;">
-          <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️ Editar</button>
-          <button onclick="window.openQuickPrice('${p.id}', ${pPrice}, ${sPrice})" style="background: none; border: 1px solid var(--border); color: var(--success); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">💰 Preço</button>
-          <button onclick="window.openVersionsModal('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">📦 Versões</button>
-          <button onclick="window.open('checkout.html?product=${p.checkout_slug || p.slug}', '_blank')" style="background: none; border: 1px solid var(--border); color: #3B82F6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">🚀 Checkout</button>
+          <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">âœï¸ Editar</button>
+          <button onclick="window.openQuickPrice('${p.id}', ${pPrice}, ${sPrice})" style="background: none; border: 1px solid var(--border); color: var(--success); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">ðŸ’° PreÃ§o</button>
+          <button onclick="window.openVersionsModal('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">ðŸ“¦ VersÃµes</button>
+          <button onclick="window.open('checkout.html?product=${p.checkout_slug || p.slug}', '_blank')" style="background: none; border: 1px solid var(--border); color: #3B82F6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">ðŸš€ Checkout</button>
         </div>
       </td>
     `;
@@ -1724,7 +1744,7 @@ window.uploadProductImage = async function(input) {
 
   const btnLabel = input.previousElementSibling;
   const originalText = btnLabel.innerHTML;
-  btnLabel.innerHTML = '⏳ Enviando...';
+  btnLabel.innerHTML = 'â³ Enviando...';
   document.getElementById('prod-thumb-status').style.display = 'none';
   
   try {
@@ -1735,14 +1755,14 @@ window.uploadProductImage = async function(input) {
     const { data, error } = await supabaseClient.storage.from('images').upload(filePath, file, { upsert: true });
     
     if (error) {
-      alert("Erro ao subir imagem: " + error.message + "\n\nSe o bucket 'images' não existir, crie um bucket público com esse nome no painel do Supabase Storage.");
+      alert("Erro ao subir imagem: " + error.message + "\n\nSe o bucket 'images' nÃ£o existir, crie um bucket pÃºblico com esse nome no painel do Supabase Storage.");
       btnLabel.innerHTML = originalText;
       return;
     }
     
     const { data: publicUrlData } = supabaseClient.storage.from('images').getPublicUrl(filePath);
     
-    // Atualiza o input com a URL pública
+    // Atualiza o input com a URL pÃºblica
     document.getElementById('prod-thumb').value = publicUrlData.publicUrl;
     document.getElementById('prod-thumb-status').style.display = 'block';
     
@@ -1941,13 +1961,13 @@ window.saveProduct = async function() {
   }
   
   if (totalPercentage > 100) {
-    alert('A soma das porcentagens do Split não pode ultrapassar 100%.');
+    alert('A soma das porcentagens do Split nÃ£o pode ultrapassar 100%.');
     return;
   }
   
   const currentPrice = parseFloat(getVal('prod-sale-price', '0')) || parseFloat(getVal('prod-price', '0')) || 0;
   if (totalFixed > currentPrice && currentPrice > 0) {
-    alert('A soma dos valores fixos do Split não pode ser maior que o valor do produto.');
+    alert('A soma dos valores fixos do Split nÃ£o pode ser maior que o valor do produto.');
     return;
   }
   
@@ -1968,11 +1988,11 @@ window.saveProduct = async function() {
   };
 
   if (!payload.name || !payload.slug) {
-    alert("Nome e Slug são obrigatórios.");
+    alert("Nome e Slug sÃ£o obrigatÃ³rios.");
     return;
   }
 
-  // Preencher checkout_slug automaticamente na criação
+  // Preencher checkout_slug automaticamente na criaÃ§Ã£o
   if (!currentEditingProductId) {
     payload.checkout_slug = payload.slug;
   }
@@ -2013,7 +2033,7 @@ async function loadVersionsList() {
     
   tbody.innerHTML = '';
   if (!versions || versions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma versão cadastrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma versÃ£o cadastrada.</td></tr>';
     return;
   }
   
@@ -2024,7 +2044,7 @@ async function loadVersionsList() {
       <td>${new Date(v.created_at).toLocaleDateString('pt-BR')}</td>
       <td style="font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${v.changelog || ''}</td>
       <td>
-        <button style="background:none; border:none; color: var(--danger); cursor:pointer;" onclick="alert('Funcionalidade em desenvolvimento')">🗑️</button>
+        <button style="background:none; border:none; color: var(--danger); cursor:pointer;" onclick="alert('Funcionalidade em desenvolvimento')">ðŸ—‘ï¸</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -2037,7 +2057,7 @@ window.saveVersion = async function() {
   const file_size = document.getElementById('v-size').value;
   const changelog = document.getElementById('v-changelog').value;
   
-  if (!version) return alert("Versão é obrigatória.");
+  if (!version) return alert("VersÃ£o Ã© obrigatÃ³ria.");
   
   // Mark others as not current
   await supabaseClient.from('product_versions').update({ is_current: false }).eq('product_id', currentVersionProductId);
@@ -2064,7 +2084,7 @@ window.saveVersion = async function() {
 }
 
 // ==========================================
-// 12. ÁREA DE MEMBROS
+// 12. ÃREA DE MEMBROS
 // ==========================================
 async function loadMembersModule() {
   if (!supabaseClient) return;
@@ -2130,7 +2150,7 @@ async function loadMembersModule() {
 }
 
 // ==========================================
-// 12. CENTRO DE NOTIFICAÇÕES (Sino)
+// 12. CENTRO DE NOTIFICAÃ‡Ã•ES (Sino)
 // ==========================================
 async function loadNotifications() {
   if (!supabaseClient) return;
@@ -2144,7 +2164,7 @@ async function loadNotifications() {
   const list = document.getElementById('notif-list');
   
   if (!notifs || notifs.length === 0) {
-    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;">Nenhuma notificação nova.</div>';
+    list.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;">Nenhuma notificaÃ§Ã£o nova.</div>';
     badge.style.display = 'none';
     return;
   }
@@ -2162,10 +2182,10 @@ async function loadNotifications() {
     const div = document.createElement('div');
     div.className = `notif-item ${!n.is_read ? 'unread' : ''}`;
     
-    let icon = '🔔';
-    if (n.type === 'whatsapp_reply') icon = '💬';
-    if (n.type === 'hot_lead') icon = '🔥';
-    if (n.type === 'purchase') icon = '💰';
+    let icon = 'ðŸ””';
+    if (n.type === 'whatsapp_reply') icon = 'ðŸ’¬';
+    if (n.type === 'hot_lead') icon = 'ðŸ”¥';
+    if (n.type === 'purchase') icon = 'ðŸ’°';
 
     div.innerHTML = `
       <div style="display: flex; gap: 8px;">
@@ -2197,8 +2217,9 @@ async function loadNotifications() {
   });
 }
 
-// Inicializa Notificações no start
+// Inicializa NotificaÃ§Ãµes no start
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => { if (supabaseClient) loadNotifications(); }, 2000);
 });
+
 

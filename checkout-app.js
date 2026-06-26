@@ -32,9 +32,10 @@ async function initCheckout(config) {
     window.NexusTracker.trackEvent('Checkout_View', { product_slug: productSlug });
   }
 
-  // Carregar Produto (Usa a policy pública que criamos)
+  // Carregar Produto — seleção explícita de colunas públicas apenas.
+  // NUNCA trazer checkout_config (contém split_rules, walletId, configs de gateway).
   const { data: product, error } = await supabaseClient.from('products')
-    .select('*')
+    .select('id, name, description, price, sale_price, currency, thumbnail_url, checkout_slug, checkout_enabled, status, pix_discount, thank_you_url, max_installments')
     .eq('checkout_slug', productSlug)
     .single();
 
@@ -95,7 +96,7 @@ async function initCheckout(config) {
   }
 
   // Preencher parcelas se max_installments estiver configurado no produto
-  const maxInst = product.checkout_config?.max_installments || 12;
+  const maxInst = product.max_installments || 12;
   const instSelect = document.getElementById('cc-installments');
   if (instSelect) {
     instSelect.innerHTML = '<option value="1">1x (Sem juros) - ' + formatter.format(currentProduct.finalPrice) + '</option>';
@@ -218,7 +219,34 @@ async function processPayment() {
     installments = parseInt(document.getElementById('cc-installments').value) || 1;
   }
 
-  // Garantir que lead tá atualizado
+  // ─── PROTEÇÃO CONTRA DUPLA SUBMISSÃO ────────────────────────────────
+  // Impede criação de cobranças duplicadas por double-click ou submit múltiplo.
+  const payBtn = document.getElementById('btn-pay');
+  if (payBtn && payBtn._isProcessing) {
+    console.warn('[Checkout] Pagamento já em andamento. Ignorando clique duplo.');
+    return;
+  }
+  if (payBtn) {
+    payBtn._isProcessing = true;
+    payBtn.disabled = true;
+    payBtn.style.opacity = '0.7';
+    payBtn.style.cursor = 'not-allowed';
+    const originalText = payBtn.innerHTML;
+    payBtn.innerHTML = '<span>Processando...</span>';
+    payBtn._originalText = originalText;
+  }
+
+  // Helper para reabilitar o botão em caso de erro
+  const releasePayBtn = () => {
+    if (payBtn) {
+      payBtn._isProcessing = false;
+      payBtn.disabled = false;
+      payBtn.style.opacity = '';
+      payBtn.style.cursor = '';
+      payBtn.innerHTML = payBtn._originalText || 'Finalizar Pagamento';
+    }
+  };
+
   await captureLead();
 
   const loader = document.getElementById('loader');
@@ -286,8 +314,9 @@ async function processPayment() {
     }
 
   } catch (err) {
+    releasePayBtn();
     loader.style.display = 'none';
-    alert("Erro: " + err.message);
+    alert('Erro: ' + err.message);
     if (window.NexusTracker && window.NexusTracker.trackEvent) {
       window.NexusTracker.trackEvent('Checkout_Error', { error: err.message });
     }

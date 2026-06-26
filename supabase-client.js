@@ -126,47 +126,10 @@
       }
     },
 
-    // ── ANALYTICS: GET LEADS ─────────────────────────────────
-    async getLeads(limit = 100, offset = 0) {
-      if (!this._ready()) return [];
-      try {
-        const res = await fetch(
-          `${this._url('leads')}?order=created_at.desc&limit=${limit}&offset=${offset}`,
-          { headers: this._headers() }
-        );
-        return await res.json();
-      } catch (e) {
-        console.warn('[Supabase] getLeads error:', e.message);
-        return [];
-      }
-    },
-
-    // ── ANALYTICS: KPI SUMMARY ──────────────────────────────
-    async getKPIs() {
-      if (!this._ready()) return {};
-      try {
-        const [leads, sessions] = await Promise.all([
-          fetch(`${this._url('leads')}?select=lead_status,lead_score,lead_tier,utm_source,created_at`, { headers: this._headers() }).then(r => r.json()),
-          fetch(`${this._url('sessions')}?select=utm_source,device,created_at`, { headers: this._headers() }).then(r => r.json()),
-        ]);
-
-        const totalLeads = leads.length;
-        const hotLeads = leads.filter(l => l.lead_tier === 'Muito Quente' || l.lead_tier === 'Quente').length;
-        const warmLeads = leads.filter(l => l.lead_tier === 'Morno').length;
-        const coldLeads = leads.filter(l => l.lead_tier === 'Frio').length;
-        const bySource = {};
-
-        leads.forEach(l => {
-          const src = l.utm_source || 'direct';
-          bySource[src] = (bySource[src] || 0) + 1;
-        });
-
-        return { totalLeads, hotLeads, warmLeads, bySource, sessions: sessions.length };
-      } catch (e) {
-        console.warn('[Supabase] getKPIs error:', e.message);
-        return {};
-      }
-    },
+    // ── ANALYTICS: GET LEADS ───────────────────────────────────────────
+    // REMOVIDO DO CLIENT PÚBLICO por segurança (auditoria A-04).
+    // Utilizar supabaseClient no admin-app.js (camada autenticada) para queries de leads.
+    // getLeads() e getKPIs() não devem estar acessíveis em JS público.
   };
 
   window.NexusDB = SupabaseClient;

@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
@@ -44,12 +44,26 @@ serve(async (req) => {
     if (!encryptionSecret) throw new Error('Encryption secret not configured');
 
     const { data: settings } = await supabase.from('gateway_settings').select('webhook_token_encrypted').eq('gateway_name', 'asaas').single();
-    let expectedToken = null;
+    let expectedToken: string | null = null;
     if (settings && settings.webhook_token_encrypted) {
       expectedToken = await decryptData(settings.webhook_token_encrypted, encryptionSecret);
     }
 
-    if (expectedToken && asaasToken !== expectedToken) {
+    // ─── FAIL-CLOSED (Hardening C-05) ────────────────────────────────────────
+    // Se o token esperado NÃO estiver configurado no banco, REJEITAMOS SEMPRE.
+    // Isso garante que um ambiente não configurado nunca processe webhooks falsos.
+    // "Fail-closed" = sem token configurado → nenhum webhook é aceito.
+    if (!expectedToken) {
+      console.warn('[asaas-webhook] SECURITY: Webhook token not configured in gateway_settings. Refusing all requests.');
+      return new Response(
+        JSON.stringify({ error: 'Webhook endpoint not ready. Configure the webhook token in gateway settings first.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ─── VALIDAÇÃO ESTRITA DO TOKEN ───────────────────────────────────────────
+    if (!asaasToken || asaasToken !== expectedToken) {
+      console.warn('[asaas-webhook] SECURITY: Invalid or missing asaas-access-token header.');
       return new Response('Unauthorized', { status: 401, headers: corsHeaders });
     }
 
@@ -99,7 +113,7 @@ serve(async (req) => {
         let productName = payment.description || 'Produto Asaas';
         
         if (checkoutSessionId) {
-          // Atualiza status do checkout session
+          // Atualiza status do checkout session — apenas o backend pode marcar como 'paid'
           await supabase.from('checkout_sessions').update({ status: 'paid' }).eq('id', checkoutSessionId);
           
           // Tenta buscar o nome do produto da checkout session
@@ -144,7 +158,8 @@ serve(async (req) => {
         gateway: 'asaas', lead_id: internalPayment?.lead_id, attempt_type: eventType, status: 'failed', amount: payment.value, payload: payment
       }]);
     }
-    // 3.5 Inserir Log Financeiro (Observabilidade)
+
+    // 3.5 Inserir Log Financeiro (Observabilidade) — sem PII em excesso
     try {
       await supabase.from('financial_logs').insert([{
         event_type: eventType.toLowerCase(),
@@ -155,7 +170,15 @@ serve(async (req) => {
         payment_method: payment.billingType,
         amount: payment.value,
         net_amount: payment.netValue,
-        response_payload: payload
+        // Não incluímos PII do comprador aqui — estes dados já constam em asaas_payments e asaas_customers
+        response_payload: {
+          event: eventType,
+          payment_id: payment.id,
+          status: payment.status,
+          value: payment.value,
+          billingType: payment.billingType,
+          // Dados de cliente omitidos do log de webhook por LGPD
+        }
       }]);
     } catch (logErr) {
       console.error("Failed to write to financial_logs via webhook:", logErr);
@@ -178,8 +201,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error(error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), { 
+    console.error('[asaas-webhook] Internal error:', error);
+    // Retorna mensagem genérica — não expõe detalhes internos
+    return new Response(JSON.stringify({ success: false, error: 'Internal server error' }), { 
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
   }

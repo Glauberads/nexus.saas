@@ -1,0 +1,44 @@
+/*
+  Configuração de headers de segurança HTTP para o NexusSaaS.
+  
+  COMO USAR:
+  - Netlify: este arquivo deve estar na raiz do projeto (já está). Deploy automático.
+  - Vercel: converter para vercel.json (instruções abaixo).
+  - Cloudflare Pages: este arquivo é suportado nativamente.
+  - Servidor próprio (Nginx): ver seção de configuração Nginx abaixo.
+  
+  IMPORTANTE: Ative APÓS verificar que o site funciona corretamente.
+  O CSP pode bloquear scripts legítimos se mal configurado.
+*/
+
+# Aplicar a TODAS as páginas
+/*
+  # ── CLICKJACKING ─────────────────────────────────────────────────────────────
+  # Impede que o site seja embutido em iframes de outros domínios (ataque de clickjacking)
+  X-Frame-Options: DENY
+
+  # ── MIME SNIFFING ────────────────────────────────────────────────────────────
+  # Impede que o browser interprete arquivos com tipo MIME diferente do declarado
+  X-Content-Type-Options: nosniff
+
+  # ── REFERRER ─────────────────────────────────────────────────────────────────
+  # Envia origem apenas para requisições do mesmo domínio; não vaza URL para terceiros
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # ── PERMISSIONS ──────────────────────────────────────────────────────────────
+  # Desabilita recursos desnecessários (câmera, microfone, geolocalização)
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(self)
+
+  # ── XSS PROTECTION ───────────────────────────────────────────────────────────
+  # Header legado mas ainda útil para browsers antigos
+  X-XSS-Protection: 1; mode=block
+
+  # ── HSTS ─────────────────────────────────────────────────────────────────────
+  # Força HTTPS por 1 ano. ATIVE SÓ APÓS confirmar que HTTPS está 100% funcional.
+  # Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # ── CSP (Content Security Policy) ────────────────────────────────────────────
+  # ATENÇÃO: Política permissiva mas segura. Ajuste conforme necessário.
+  # Libera: scripts próprios + CDNs usados (Supabase, Meta, Google, Chart.js)
+  # Bloqueia: eval(), inline scripts sem nonce (ajuste para produção)
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://esm.sh https://*.supabase.co https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://www.gstatic.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://graph.facebook.com https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://sandbox.asaas.com https://api.asaas.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';

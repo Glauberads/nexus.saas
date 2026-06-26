@@ -207,9 +207,33 @@ serve(async (req) => {
     if (safePayload.creditCard) {
       safePayload.creditCard = { ...safePayload.creditCard, number: '****', ccv: '***', expiryMonth: '**', expiryYear: '****' };
     }
+    // Remover creditCardHolderInfo do payload salvo (contém CPF, CEP, telefone)
+    if (safePayload.creditCardHolderInfo) {
+      safePayload.creditCardHolderInfo = { name: safePayload.creditCardHolderInfo.name || '***' };
+    }
+
+    // ─── Mascaramento de PII para LGPD ───────────────────────────────────────
+    const maskCpf = (doc: string | undefined) => {
+      if (!doc) return null;
+      const d = doc.replace(/\D/g, '');
+      if (d.length === 11) return `***.***.***-${d.slice(-2)}`; // CPF
+      if (d.length === 14) return `**.***.***/****-${d.slice(-2)}`; // CNPJ
+      return '***';
+    };
+    const maskPhone = (p: string | undefined) => {
+      if (!p) return null;
+      const d = p.replace(/\D/g, '');
+      if (d.length >= 10) return `(${d.slice(0,2)}) ****-${d.slice(-4)}`;
+      return '****';
+    };
+    const maskEmail = (e: string | undefined) => {
+      if (!e || !e.includes('@')) return null;
+      const [user, domain] = e.split('@');
+      return `${user.slice(0,2)}***@${domain}`;
+    };
 
     await supabase.from('payment_attempts').insert([{
-      gateway: 'asaas', lead_id, attempt_type: `${billingType}_CREATED`, status: 'pending', amount: realPrice, payload: { ...payData, _applied_split: paymentPayload.split || [] }
+      gateway: 'asaas', lead_id, attempt_type: `${billingType}_CREATED`, status: 'pending', amount: realPrice, payload: { payment_id: payData.id, status: payData.status, _applied_split: paymentPayload.split || [] }
     }]);
 
     await supabase.from('financial_logs').insert([{
@@ -219,9 +243,9 @@ serve(async (req) => {
       product_name: product.name,
       product_slug: product.checkout_slug,
       customer_name: name,
-      customer_email: email,
-      customer_phone: phone,
-      customer_document: cpfCnpj,
+      customer_email: maskEmail(email),
+      customer_phone: maskPhone(phone),
+      customer_document: maskCpf(cpfCnpj),
       gateway: 'asaas',
       payment_id: payData.id,
       payment_status: payData.status,
@@ -231,7 +255,7 @@ serve(async (req) => {
       split_enabled: splitRulesGlob.length > 0,
       metadata: { applied_splits: splitRulesGlob },
       request_payload: safePayload,
-      response_payload: payData
+      response_payload: { id: payData.id, status: payData.status, value: payData.value, netValue: payData.netValue, billingType: payData.billingType, dueDate: payData.dueDate, invoiceUrl: payData.invoiceUrl }
     }]);
 
     await supabase.from('asaas_payments').insert([{
@@ -279,7 +303,27 @@ serve(async (req) => {
        safeReqBody.creditCard = { ...safeReqBody.creditCard, number: '****', ccv: '***', expiryMonth: '**', expiryYear: '****' };
     }
 
-    // Log do erro em financial_logs
+    // ─── Mascaramento de PII no log de erro (LGPD) ───────────────────────────
+    const maskCpfErr = (doc: string | undefined) => {
+      if (!doc) return null;
+      const d = doc.replace(/\D/g, '');
+      if (d.length === 11) return `***.***.***-${d.slice(-2)}`;
+      if (d.length === 14) return `**.***.***/****-${d.slice(-2)}`;
+      return '***';
+    };
+    const maskPhoneErr = (p: string | undefined) => {
+      if (!p) return null;
+      const d = p.replace(/\D/g, '');
+      if (d.length >= 10) return `(${d.slice(0,2)}) ****-${d.slice(-4)}`;
+      return '****';
+    };
+    const maskEmailErr = (e: string | undefined) => {
+      if (!e || !e.includes('@')) return null;
+      const [user, domain] = e.split('@');
+      return `${user.slice(0,2)}***@${domain}`;
+    };
+
+    // Log do erro em financial_logs — sem PII sensível
     try {
       await supabase.from('financial_logs').insert([{
         event_type: 'payment_failed',
@@ -288,9 +332,9 @@ serve(async (req) => {
         product_name: productData?.name,
         product_slug: reqBody?.product_slug,
         customer_name: reqBody?.name,
-        customer_email: reqBody?.email,
-        customer_phone: reqBody?.phone,
-        customer_document: reqBody?.cpfCnpj,
+        customer_email: maskEmailErr(reqBody?.email),
+        customer_phone: maskPhoneErr(reqBody?.phone),
+        customer_document: maskCpfErr(reqBody?.cpfCnpj),
         gateway: 'asaas',
         payment_method: reqBody?.billingType,
         amount: finalAmount,
@@ -303,7 +347,18 @@ serve(async (req) => {
        console.error("Failed to write to financial_logs:", logErr);
     }
 
-    return new Response(JSON.stringify({ success: false, error: error.message }), { 
+    // Retorna mensagem de erro amigável e genérica para o client — não expõe detalhes internos
+    const userFriendlyError = (() => {
+      const msg = error.message || '';
+      if (msg.includes('Produto não encontrado') || msg.includes('não está disponível')) return 'Este produto não está disponível no momento.';
+      if (msg.includes('Missing required fields')) return 'Dados incompletos. Verifique o formulário e tente novamente.';
+      if (msg.includes('Valor inválido')) return 'Valor do produto inválido. Contate o suporte.';
+      if (msg.includes('split inválida')) return 'Erro de configuração do produto. Contate o suporte.';
+      if (msg.includes('Gateway')) return 'Erro temporário no processamento. Tente novamente em instantes.';
+      return 'Erro ao processar pagamento. Tente novamente ou entre em contato com o suporte.';
+    })();
+
+    return new Response(JSON.stringify({ success: false, error: userFriendlyError }), { 
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     });
   }
