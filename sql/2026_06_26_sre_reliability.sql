@@ -22,8 +22,9 @@ CREATE TABLE IF NOT EXISTS public.webhook_idempotency (
 );
 
 ALTER TABLE public.webhook_idempotency ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Enable insert for service role on webhook_idempotency" ON public.webhook_idempotency FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable select for service role on webhook_idempotency" ON public.webhook_idempotency FOR SELECT USING (true);
+DROP POLICY IF EXISTS "webhook_idempotency_admin_select" ON public.webhook_idempotency;
+CREATE POLICY "webhook_idempotency_admin_select" ON public.webhook_idempotency FOR SELECT USING (public.is_admin());
+-- Nota: Service Role passa reto no RLS, portanto consegue inserir. Não expomos INSERT para authenticated/anon.
 
 
 -- 3. CREATE DEAD LETTER QUEUE (DLQ) TABLE
@@ -42,7 +43,9 @@ CREATE TABLE IF NOT EXISTS public.dead_letter_queue (
 );
 
 ALTER TABLE public.dead_letter_queue ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Enable all for admins on dlq" ON public.dead_letter_queue FOR ALL USING (true);
+DROP POLICY IF EXISTS "Enable all for admins on dlq" ON public.dead_letter_queue;
+CREATE POLICY "Enable all for admins on dlq" ON public.dead_letter_queue FOR ALL USING (public.is_admin());
+-- Nota: Novamente, Service Role consegue inserir sem policy extra.
 
 
 -- 4. RPC: Idempotency Check (Returns TRUE if it was successfully locked/inserted, FALSE if already exists)
@@ -76,9 +79,32 @@ AS $$
 DECLARE
   v_id UUID;
 BEGIN
-  -- Remover dados sensíveis do payload (Basic Sanitization)
-  IF p_payload ? 'creditCard' THEN
-    p_payload = p_payload - 'creditCard';
+  -- Remover dados sensíveis do payload (Advanced Sanitization)
+  IF p_payload ? 'creditCard' THEN p_payload = p_payload - 'creditCard'; END IF;
+  IF p_payload ? 'creditCardHolderInfo' THEN p_payload = p_payload - 'creditCardHolderInfo'; END IF;
+  IF p_payload ? 'ccv' THEN p_payload = p_payload - 'ccv'; END IF;
+  IF p_payload ? 'cvv' THEN p_payload = p_payload - 'cvv'; END IF;
+  IF p_payload ? 'number' THEN p_payload = p_payload - 'number'; END IF;
+  IF p_payload ? 'expiryMonth' THEN p_payload = p_payload - 'expiryMonth'; END IF;
+  IF p_payload ? 'expiryYear' THEN p_payload = p_payload - 'expiryYear'; END IF;
+  IF p_payload ? 'holderName' THEN p_payload = p_payload - 'holderName'; END IF;
+  IF p_payload ? 'password' THEN p_payload = p_payload - 'password'; END IF;
+  IF p_payload ? 'token' THEN p_payload = p_payload - 'token'; END IF;
+  IF p_payload ? 'access_token' THEN p_payload = p_payload - 'access_token'; END IF;
+  
+  -- Mascarar CPF/CNPJ e Telefones
+  IF p_payload ? 'cpfCnpj' AND jsonb_typeof(p_payload->'cpfCnpj') = 'string' THEN
+    p_payload = jsonb_set(p_payload, '{cpfCnpj}', '"***.***.***-**"');
+  END IF;
+  IF p_payload ? 'cpfCnpj' AND jsonb_typeof(p_payload->'cpfCnpj') = 'number' THEN
+    p_payload = jsonb_set(p_payload, '{cpfCnpj}', '"***"');
+  END IF;
+
+  IF p_payload ? 'phone' AND jsonb_typeof(p_payload->'phone') = 'string' THEN
+    p_payload = jsonb_set(p_payload, '{phone}', '"(***) ****-****"');
+  END IF;
+  IF p_payload ? 'mobilePhone' AND jsonb_typeof(p_payload->'mobilePhone') = 'string' THEN
+    p_payload = jsonb_set(p_payload, '{mobilePhone}', '"(***) ****-****"');
   END IF;
   
   INSERT INTO public.dead_letter_queue (endpoint, payload, error_message, stack_trace, correlation_id)
@@ -97,11 +123,10 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_user_email text := auth.jwt()->>'email';
   v_res jsonb;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM admin_users WHERE email = v_user_email) THEN
-    RAISE EXCEPTION 'Acesso Negado';
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Acesso Negado: Usuário não é administrador.';
   END IF;
 
   SELECT jsonb_build_object(
@@ -115,7 +140,9 @@ BEGIN
 END;
 $$;
 
--- Permissões
-GRANT EXECUTE ON FUNCTION public.check_idempotency TO authenticated, anon;
-GRANT EXECUTE ON FUNCTION public.insert_dlq TO authenticated, anon;
+-- Permissões Reforçadas (Revogar de anon/public onde não deve haver acesso)
+REVOKE ALL ON FUNCTION public.insert_dlq FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.check_idempotency FROM PUBLIC, anon, authenticated;
+
+-- Apenas funções de leitura do painel para administradores
 GRANT EXECUTE ON FUNCTION public.get_sre_status TO authenticated;
