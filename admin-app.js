@@ -164,6 +164,26 @@ function applyDateFilter(query) {
   return query;
 }
 
+// --- MASKS LGPD ---
+window.maskCpf = function(doc) {
+  if (!doc) return '-';
+  const d = doc.replace(/\D/g, '');
+  if (d.length === 11) return `***.***.***-${d.slice(-2)}`;
+  if (d.length === 14) return `**.***.***/****-${d.slice(-2)}`;
+  return '***';
+};
+window.maskPhone = function(p) {
+  if (!p) return '-';
+  const d = p.replace(/\D/g, '');
+  if (d.length >= 10) return `(${d.slice(0,2)}) ****-${d.slice(-4)}`;
+  return '****';
+};
+window.maskEmail = function(e) {
+  if (!e || !e.includes('@')) return '-';
+  const parts = e.split('@');
+  return `${parts[0].slice(0,3)}***@${parts[1]}`;
+};
+
 // ==========================================
 // 3. DATA LOADING & RENDER
 // ==========================================
@@ -243,7 +263,7 @@ async function loadDashboard() {
           const badgeClass = escapeHtml(l.lead_tier ? l.lead_tier.toLowerCase().replace(' ', '-') : 'frio');
           tr.innerHTML = `
             <td>${escapeHtml(l.name || 'Desconhecido')}</td>
-            <td>${escapeHtml(l.email || l.whatsapp || '-')}</td>
+            <td>${escapeHtml(window.maskEmail(l.email))} <br> <span style="font-size:10px;color:var(--text-muted)">${escapeHtml(window.maskPhone(l.whatsapp))}</span></td>
             <td>${escapeHtml(l.utm_source || 'direto')}</td>
             <td><strong>${escapeHtml(String(l.lead_score || 0))}</strong></td>
             <td><span class="badge ${badgeClass}">${escapeHtml(l.lead_tier || '-')}</span></td>
@@ -333,8 +353,8 @@ async function loadLeadsModule() {
       const badgeClass = escapeHtml(l.lead_tier ? l.lead_tier.toLowerCase().replace(' ', '-') : 'frio');
       tr.innerHTML = `
         <td>${escapeHtml(l.name || '-')}</td>
-        <td>${escapeHtml(l.email || '-')}</td>
-        <td>${escapeHtml(l.whatsapp || '-')}</td>
+        <td>${escapeHtml(window.maskEmail(l.email))}</td>
+        <td>${escapeHtml(window.maskPhone(l.whatsapp))}</td>
         <td><span class="badge ${badgeClass}">${escapeHtml(l.lead_tier || 'Frio')}</span></td>
         <td>${escapeHtml(new Date(l.created_at).toLocaleDateString('pt-BR'))}</td>
         <td class="clickable" onclick="openLeadDrawer('${escapeHtml(l.id)}')">Ver &rarr;</td>
@@ -2136,7 +2156,7 @@ async function loadMembersModule() {
           <div style="font-weight: 600;">${m.name}</div>
           <div style="font-size: 11px; color: var(--text-muted);">${m.id}</div>
         </td>
-        <td>${m.email}</td>
+        <td>${escapeHtml(window.maskEmail(m.email))}</td>
         <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${m.status}</td>
         <td>${lastAccess}</td>
         <td><span class="badge ${m.engagement_score > 50 ? 'quente' : 'frio'}">${m.engagement_score} pts</span></td>

@@ -82,17 +82,27 @@ async function initCheckout(config) {
     gclid: urlParams.get('gclid'),
   };
 
-  // Inicializar Sessão Anônima no Banco
-  const { data: session } = await supabaseClient.from('checkout_sessions').insert([{
-    product_id: product.id,
-    product_slug: product.checkout_slug,
-    status: 'started',
-    amount: product.price,
-    ...utms
-  }]).select('id').single();
-
-  if (session) {
-    currentSessionId = session.id;
+  // Inicializar Sessão Anônima via Edge Function Segura
+  try {
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'create_checkout_session',
+        product_id: product.id,
+        product_slug: product.checkout_slug,
+        amount: product.price,
+        status: 'started',
+        ...utms
+      })
+    });
+    const session = await res.json();
+    if (session && session.id) {
+      currentSessionId = session.id;
+      window.currentSessionToken = session.session_token; // Guardar o token
+    }
+  } catch (err) {
+    console.error("Erro ao criar sessão:", err);
   }
 
   // Preencher parcelas se max_installments estiver configurado no produto
@@ -146,12 +156,19 @@ async function captureLead() {
       if (newLead) currentLeadId = newLead.id;
     }
 
-    // Atualiza sessão
+    // Atualiza sessão via Edge Function
     if (currentSessionId && currentLeadId) {
-      await supabaseClient.from('checkout_sessions').update({
-        lead_id: currentLeadId,
-        status: 'lead_captured'
-      }).eq('id', currentSessionId);
+      fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_checkout_session',
+          session_id: currentSessionId,
+          session_token: window.currentSessionToken,
+          lead_id: currentLeadId,
+          status: 'lead_captured'
+        })
+      }).catch(console.error);
     }
 
     if (window.NexusTracker && window.NexusTracker.trackEvent && !window._leadCapturedTracked) {
@@ -334,9 +351,13 @@ function startPolling(asaasPaymentId) {
   if (checkInterval) clearInterval(checkInterval);
 
   checkInterval = setInterval(async () => {
-    // Consulta status do checkout session no nosso banco
-    const { data } = await supabaseClient.from('checkout_sessions').select('status').eq('id', currentSessionId).single();
-    if (data && data.status === 'paid') {
+    // Consulta status do checkout session via RPC segura com token
+    const { data: status } = await supabaseClient.rpc('get_checkout_status', { 
+      p_session_id: currentSessionId,
+      p_session_token: window.currentSessionToken
+    });
+    
+    if (status === 'paid') {
       clearInterval(checkInterval);
       redirectToThankYou('paid');
     }
