@@ -250,8 +250,9 @@
       // Save session to Supabase
       this._saveSession();
 
-      // ViewContent
-      this.track('ViewContent', { content_name: 'NexusSaaS Landing' });
+      // Core page tracking
+      this.track('PageView', { title: document.title });
+      this.track('ViewContent', { content_name: 'NexusSaaS Landing', value: 0 });
 
       console.log('%c NexusTracker v2 ✓ ', 'background:#FF6B00;color:#fff;padding:4px 10px;border-radius:4px;font-weight:bold;');
     },
@@ -300,11 +301,13 @@
     // ── META PIXEL ─────────────────────────────────────────
     _trackMeta(eventName, params, eventId) {
       if (!window.fbq) return;
+      const val = params?.value || 0;
+      const currency = params?.currency || 'BRL';
       const metaStandard = {
-        ViewContent: () => fbq('track', 'ViewContent', { content_name: 'NexusSaaS', currency: 'BRL', value: 497 }, { eventID: eventId }),
-        Lead: () => fbq('track', 'Lead', { currency: 'BRL', value: 0 }, { eventID: eventId }),
-        InitiateCheckout: () => fbq('track', 'InitiateCheckout', { currency: 'BRL', value: 497 }, { eventID: eventId }),
-        Purchase: () => fbq('track', 'Purchase', { currency: 'BRL', value: 497, order_id: params.order_id }, { eventID: eventId }),
+        ViewContent: () => fbq('track', 'ViewContent', { content_name: 'NexusSaaS', currency, value: val }, { eventID: eventId }),
+        Lead: () => fbq('track', 'Lead', { currency, value: val }, { eventID: eventId }),
+        InitiateCheckout: () => fbq('track', 'InitiateCheckout', { currency, value: val, content_ids: [params?.product_slug || 'nexussaas'] }, { eventID: eventId }),
+        Purchase: () => fbq('track', 'Purchase', { currency, value: val, order_id: params?.order_id }, { eventID: eventId }),
       };
       if (metaStandard[eventName]) {
         metaStandard[eventName]();
@@ -316,7 +319,8 @@
     // ── GA4 / GTM ──────────────────────────────────────────
     _trackGA4(eventName, params) {
       const ga4Map = {
-        ViewContent: 'view_content',
+        PageView: 'page_view',
+        ViewContent: 'view_item',
         Lead: 'generate_lead',
         InitiateCheckout: 'begin_checkout',
         Purchase: 'purchase',
@@ -354,8 +358,8 @@
       if (window.gtag) {
         gtag('event', ga4EventName, {
           ...params,
-          currency: 'BRL',
-          value: eventName === 'Purchase' ? 497 : undefined,
+          currency: params?.currency || 'BRL',
+          value: params?.value || (eventName === 'Purchase' || eventName === 'InitiateCheckout' ? 0 : undefined),
         });
       }
     },

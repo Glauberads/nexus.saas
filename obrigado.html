@@ -224,11 +224,30 @@
     document.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const status = urlParams.get('status');
+      const productSlug = urlParams.get('product') || 'unknown';
+      const valParam = urlParams.get('val') || '0';
+      const curParam = urlParams.get('cur') || 'BRL';
+      const txidParam = urlParams.get('txid') || ('tx_' + Math.random().toString(36).substr(2, 9));
+      
       const card = document.getElementById('status-card');
       const upsellBox = document.getElementById('upsell-box');
 
       // 1. RENDERIZAR MENSAGEM DE SUCESSO/PENDENTE
-      if (status === 'paid') {
+      if (status === 'paid' || status === 'approved') {
+        
+        // 1.1 TRACKING SEGURO (Evita Duplicidade)
+        const trackKey = 'tracked_' + txidParam;
+        if (!localStorage.getItem(trackKey)) {
+          localStorage.setItem(trackKey, 'true');
+          if (window.NexusTracker && window.NexusTracker.track) {
+            window.NexusTracker.track('Purchase', { 
+              value: parseFloat(valParam), 
+              currency: curParam,
+              order_id: txidParam,
+              product_slug: productSlug
+            });
+          }
+        }
         card.innerHTML = `
           <div class="icon-wrapper icon-success">✓</div>
           <h1>Pagamento Aprovado!</h1>
@@ -281,7 +300,7 @@
               if (!uc.upsell_title || !uc.upsell_new_price || !uc.upsell_link) return;
 
               // Se o status for de sucesso ou pendente, mostramos
-              if (status === 'paid' || status === 'pending') {
+              if (status === 'paid' || status === 'approved' || status === 'pending') {
                 document.getElementById('upsell-title-el').innerHTML = uc.upsell_title;
                 
                 if (uc.upsell_desc) {

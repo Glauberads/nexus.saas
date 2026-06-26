@@ -29,7 +29,7 @@ async function initCheckout(config) {
 
   // Tracking
   if (window.NexusTracker && window.NexusTracker.trackEvent) {
-    window.NexusTracker.trackEvent('Checkout_View', { product_slug: productSlug });
+    // will track after product load
   }
 
   // Carregar Produto — seleção explícita de colunas públicas apenas.
@@ -45,6 +45,16 @@ async function initCheckout(config) {
   }
 
   currentProduct = product;
+  
+  // Tracking
+  if (window.NexusTracker && window.NexusTracker.track) {
+    const finalPrice = parseFloat(product.sale_price || product.price || 0);
+    window.NexusTracker.track('InitiateCheckout', { 
+      product_slug: productSlug, 
+      value: finalPrice, 
+      currency: product.currency || 'BRL'
+    });
+  }
 
   // Preencher UI
   document.getElementById('product-name').textContent = product.name;
@@ -367,6 +377,14 @@ function startPolling(asaasPaymentId) {
 function redirectToThankYou(status) {
   // Se o produto tiver thank_you_url customizada, podemos ir pra lá
   // Se não, criamos a obrigado.html genérica
-  const url = currentProduct.thank_you_url || `obrigado.html?status=${status}&product=${currentProduct.checkout_slug}`;
+  const finalPrice = parseFloat(currentProduct.sale_price || currentProduct.price || 0);
+  const currency = currentProduct.currency || 'BRL';
+  const txid = window.currentSessionToken || 'no_id';
+  
+  const query = `status=${status}&product=${currentProduct.checkout_slug}&val=${finalPrice}&cur=${currency}&txid=${txid}`;
+  const url = currentProduct.thank_you_url 
+    ? `${currentProduct.thank_you_url}?${query}`
+    : `obrigado.html?${query}`;
+    
   window.location.href = url;
 }
