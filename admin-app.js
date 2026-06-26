@@ -2259,11 +2259,22 @@ function getFilterDays() {
   return 3650; // tudo (10 anos)
 }
 
-async function loadAnalyticsModule() {
+async function fetchAnalyticsRPC(rpcName, days, forceRefresh = false) {
+  const cacheKey = `analytics_${rpcName}_${days}`;
+  if (!forceRefresh) {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached);
+  }
+  const { data, error } = await supabaseClient.rpc(rpcName, { p_days: days });
+  if (!error && data) sessionStorage.setItem(cacheKey, JSON.stringify(data));
+  return data;
+}
+
+async function loadAnalyticsModule(forceRefresh = false) {
   const days = getFilterDays();
   
   // 1. Fetch KPIs
-  const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_executive_kpis', { p_days: days });
+  const kpiData = await fetchAnalyticsRPC('get_executive_kpis', days, forceRefresh);
   if (kpiData) {
     document.getElementById('kpi-rev-period').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpiData.revenue_period || 0);
     document.getElementById('kpi-rev-today').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpiData.revenue_today || 0);
@@ -2281,7 +2292,7 @@ async function loadAnalyticsModule() {
   }
 
   // 2. Fetch Funnel
-  const { data: funnelData } = await supabaseClient.rpc('get_funnel_stats', { p_days: days });
+  const funnelData = await fetchAnalyticsRPC('get_funnel_stats', days, forceRefresh);
   if (funnelData) {
     const fBody = document.getElementById('analytics-funnel-body');
     let html = '';
@@ -2306,7 +2317,7 @@ async function loadAnalyticsModule() {
   }
 
   // 3. Fetch UTMs
-  const { data: utmData } = await supabaseClient.rpc('get_utm_acquisition', { p_days: days });
+  const utmData = await fetchAnalyticsRPC('get_utm_acquisition', days, forceRefresh);
   if (utmData) {
     const uBody = document.getElementById('analytics-utm-body');
     if (utmData.length === 0 || !utmData[0].source) uBody.innerHTML = '<tr><td colspan="2">Sem dados</td></tr>';
@@ -2314,7 +2325,7 @@ async function loadAnalyticsModule() {
   }
 
   // 4. Fetch Payments Split
-  const { data: payData } = await supabaseClient.rpc('get_financial_split', { p_days: days });
+  const payData = await fetchAnalyticsRPC('get_financial_split', days, forceRefresh);
   if (payData) {
     const pBody = document.getElementById('analytics-payment-body');
     if (payData.length === 0 || !payData[0].method) pBody.innerHTML = '<tr><td colspan="3">Sem dados</td></tr>';
@@ -2322,7 +2333,7 @@ async function loadAnalyticsModule() {
   }
 
   // 5. Fetch Chart Data
-  const { data: chartData } = await supabaseClient.rpc('get_charts_data', { p_days: days });
+  const chartData = await fetchAnalyticsRPC('get_charts_data', days, forceRefresh);
   if (chartData && chartData.revenue && chartData.leads) {
     const ctx = document.getElementById('analyticsEvolutionChart');
     if (ctx) {
@@ -2353,17 +2364,17 @@ async function loadAnalyticsModule() {
 
 // Binds export
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btn-refresh-analytics')?.addEventListener('click', () => loadAnalyticsModule());
+  document.getElementById('btn-refresh-analytics')?.addEventListener('click', () => loadAnalyticsModule(true));
   document.getElementById('btn-export-pdf')?.addEventListener('click', () => window.print());
   document.getElementById('btn-export-csv')?.addEventListener('click', async () => {
     // Generate simple CSV
     const days = getFilterDays();
     const { data: kpiData } = await supabaseClient.rpc('get_executive_kpis', { p_days: days });
-    let csv = 'Receita Total,Receita Hoje,Ticket Medio,Total Compras,Leads\n';
+    let csv = '\uFEFFReceita Total,Receita Hoje,Ticket Medio,Total Compras,Leads\n';
     if(kpiData) {
       csv += `${kpiData.revenue_period},${kpiData.revenue_today},${kpiData.revenue_period/kpiData.purchases_period},${kpiData.purchases_period},${kpiData.leads_period}\n`;
     }
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
