@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, checkRateLimit } from "../_shared/security.ts";
 
 // Configurações do CAPI
 const CAPI_VERSION = "v21.0";
@@ -12,6 +13,31 @@ const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  // ── RATE LIMITING (10 requests / minuto / IP)
+  const isAllowed = await checkRateLimit(supabase, req, 'abandonment-recovery', 10, 60);
+  if (!isAllowed) {
+    return new Response(JSON.stringify({ error: 'Too Many Requests' }), { 
+      status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
+
+  // ── WEBHOOK SECRET VALIDATION (A-06)
+  const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
+  if (webhookSecret) {
+    const providedSecret = req.headers.get("x-webhook-secret");
+    if (providedSecret !== webhookSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
+    }
+  }
+
   try {
     const payload = await req.json();
     
@@ -20,7 +46,7 @@ serve(async (req) => {
     const isAbandoned = payload.status === 'abandoned' || payload.event === 'cart_abandoned' || payload.status === 'canceled';
     
     if (!isAbandoned) {
-      return new Response(JSON.stringify({ msg: "Ignored event" }), { status: 200 });
+      return new Response(JSON.stringify({ msg: "Ignored event" }), { status: 200, headers: corsHeaders });
     }
 
     const email = payload.email || payload.buyer?.email || payload.customer?.email;
@@ -28,7 +54,7 @@ serve(async (req) => {
     const firstName = payload.first_name || payload.buyer?.first_name || "Lead";
 
     if (!email) {
-      return new Response(JSON.stringify({ error: "Missing email" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing email" }), { status: 400, headers: corsHeaders });
     }
 
     // 1. Atualizar o Status do Lead no Supabase
@@ -76,10 +102,14 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, phone, firstName, event: 'abandonment' })
       }).catch(e => console.error("n8n Webhook error:", e));
-    }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ msg: "Recovery process started (with n8n)" }), { status: 200, headers: corsHeaders });
+    }
+    
+    return new Response(JSON.stringify({ success: true, msg: "Recovery process started" }), { status: 200, headers: corsHeaders });
+    
+  } catch (err: any) {
+    console.error("Error processing recovery:", err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 });

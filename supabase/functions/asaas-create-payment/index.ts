@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { getCorsHeaders, checkRateLimit } from "../_shared/security.ts"
 
 async function getCryptoKey(secretString: string): Promise<CryptoKey> {
   const enc = new TextEncoder();
@@ -29,6 +26,8 @@ async function decryptData(encryptedBase64: string, secretString: string): Promi
 }
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -41,6 +40,14 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // ── RATE LIMITING (5 requests / minuto / IP)
+  const isAllowed = await checkRateLimit(supabase, req, 'asaas-create-payment', 5, 60);
+  if (!isAllowed) {
+    return new Response(JSON.stringify({ success: false, error: 'Too Many Requests' }), { 
+      status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
+  }
 
   try {
     reqBody = await req.json();
@@ -347,19 +354,16 @@ serve(async (req) => {
        console.error("Failed to write to financial_logs:", logErr);
     }
 
-    // Retorna mensagem de erro amigável e genérica para o client — não expõe detalhes internos
-    const userFriendlyError = (() => {
-      const msg = error.message || '';
-      if (msg.includes('Produto não encontrado') || msg.includes('não está disponível')) return 'Este produto não está disponível no momento.';
-      if (msg.includes('Missing required fields')) return 'Dados incompletos. Verifique o formulário e tente novamente.';
-      if (msg.includes('Valor inválido')) return 'Valor do produto inválido. Contate o suporte.';
-      if (msg.includes('split inválida')) return 'Erro de configuração do produto. Contate o suporte.';
-      if (msg.includes('Gateway')) return 'Erro temporário no processamento. Tente novamente em instantes.';
-      return 'Erro ao processar pagamento. Tente novamente ou entre em contato com o suporte.';
-    })();
-
-    return new Response(JSON.stringify({ success: false, error: userFriendlyError }), { 
-      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-    });
+  } catch (error: any) {
+    console.error('Error creating Asaas payment:', error);
+    
+    // Mapeamento de erros seguros (M-07)
+    const userFriendlyErrors: Record<string, string> = {
+      'Missing required fields: email, billingType, product_slug': 'Dados incompletos. Verifique o formulário.',
+      'Produto não encontrado ou inativo': 'Este produto não está disponível no momento.'
+    };
+    const userMsg = userFriendlyErrors[error.message] || 'Erro ao processar pagamento. Tente novamente ou contate o suporte.';
+    
+    return new Response(JSON.stringify({ success: false, error: userMsg }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 })

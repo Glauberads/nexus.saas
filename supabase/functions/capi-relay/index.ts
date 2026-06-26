@@ -5,14 +5,26 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { getCorsHeaders, checkRateLimit } from "../_shared/security.ts"
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // ── RATE LIMITING (30 requests / minuto / IP)
+  const isAllowed = await checkRateLimit(supabase, req, 'capi-relay', 30, 60);
+  if (!isAllowed) {
+    return new Response(JSON.stringify({ error: 'Too Many Requests' }), { 
+      status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
   }
 
   try {
@@ -60,17 +72,12 @@ serve(async (req) => {
       body: JSON.stringify({ data: capiData })
     })
 
-    const result = await response.json()
+    const fbData = await response.json()
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: response.ok ? 200 : 400
-    })
+    return new Response(JSON.stringify(fbData), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400
-    })
+  } catch (error: any) {
+    console.error('CAPI Relay error:', error)
+    return new Response(JSON.stringify({ error: error.message }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 })
   }
 })
