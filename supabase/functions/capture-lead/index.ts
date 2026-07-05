@@ -25,8 +25,18 @@ serve(async (req) => {
     if (action === 'create_checkout_session') {
       const { action: _, ...sessionData } = body;
       
+      const allowedSessionKeys = [
+        'lead_id', 'product_id', 'product_slug', 'status', 'payment_method', 
+        'amount', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 
+        'utm_term', 'fbclid', 'gclid', 'asaas_payment_id', 'expires_at', 'raw_payload'
+      ];
+      const safeSessionData: any = {};
+      for (const key of allowedSessionKeys) {
+        if (sessionData[key] !== undefined) safeSessionData[key] = sessionData[key];
+      }
+      
       const { data, error } = await supabase.from('checkout_sessions').insert([
-        sessionData
+        safeSessionData
       ]).select('id, session_token').single();
 
       if (error) throw error;
@@ -46,14 +56,50 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // AÇÃO 3: Upsert Lead (chamado pelo tracking.js)
+    // AÇÃO 3: Upsert Lead (chamado pelo tracking.js ou checkout-app.js)
     if (action === 'upsert_lead') {
-      const { leadData } = body;
+      const leadData = body.leadData || {};
       
-      const { data, error } = await supabase.from('leads').upsert(leadData, { onConflict: 'email' }).select().single();
+      const email = leadData.email || `anonymous_${Date.now()}@nexus.local`;
+      const name = leadData.name || 'Visitante';
+      const whatsapp = leadData.whatsapp || leadData.phone || '';
+
+      const allowedLeadKeys = [
+        'session_id', 'name', 'email', 'whatsapp', 'utm_source', 'utm_medium', 
+        'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid', 'device', 
+        'city', 'state', 'external_id', 'em_hash', 'ph_hash', 'lead_score', 
+        'lead_tier', 'lead_status', 'quiz_answers', 'ltv'
+      ];
+      
+      const safeLeadData: any = { email, name, whatsapp };
+      
+      for (const key of allowedLeadKeys) {
+        if (leadData[key] !== undefined && key !== 'email' && key !== 'name' && key !== 'whatsapp' && key !== 'phone') {
+          safeLeadData[key] = leadData[key];
+        }
+      }
+      
+      const { data, error } = await supabase.from('leads').upsert(safeLeadData, { onConflict: 'email' }).select().single();
       
       if (error) throw error;
       return new Response(JSON.stringify(data), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // AÇÃO 4: Log de Eventos (Analytics)
+    if (action === 'log_event') {
+      const eventData = body.eventData || {};
+      const allowedEventKeys = [
+        'event_id', 'event_name', 'session_id', 'lead_score', 'params', 'device', 'url', 'referrer'
+      ];
+      const safeEventData: any = {};
+      for (const key of allowedEventKeys) {
+        if (eventData[key] !== undefined) safeEventData[key] = eventData[key];
+      }
+
+      const { error } = await supabase.from('events').insert([safeEventData]);
+      if (error) console.error("Event log error", error);
+      
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: corsHeaders });

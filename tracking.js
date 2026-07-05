@@ -452,24 +452,24 @@
     async _logEvent(eventName, params, eventId) {
       if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('SEU_')) return;
       try {
-        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/events`, {
+        await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'apikey': CONFIG.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
-            'Prefer': 'return=minimal',
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            event_id: eventId,
-            event_name: eventName,
-            session_id: this.sessionId,
-            lead_score: LeadScore.score,
-            params: params,
-            device: this.device,
-            url: window.location.href,
-            referrer: document.referrer,
-          }),
+            action: 'log_event',
+            eventData: {
+              event_id: eventId,
+              event_name: eventName,
+              session_id: this.sessionId,
+              lead_score: LeadScore.score,
+              params: params,
+              device: this.device,
+              url: window.location.href,
+              referrer: document.referrer
+            }
+          })
         });
       } catch (_) {}
     },
