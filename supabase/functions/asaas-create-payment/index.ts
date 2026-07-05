@@ -359,7 +359,13 @@ serve(async (req) => {
       'Missing required fields: email, billingType, product_slug': 'Dados incompletos. Verifique o formulário.',
       'Produto não encontrado ou inativo': 'Este produto não está disponível no momento.'
     };
-    const userMsg = userFriendlyErrors[error.message] || 'Erro ao processar pagamento. Tente novamente ou contate o suporte.';
+    
+    let userMsg = userFriendlyErrors[error.message] || 'Erro ao processar pagamento. Tente novamente ou contate o suporte.';
+    
+    // Tratamento dinâmico para erros repassados pelo Asaas
+    if (error.message && error.message.includes('invalid_email')) {
+      userMsg = 'O e-mail informado é inválido. Por favor, corrija e tente novamente.';
+    }
     
     return new Response(JSON.stringify({ success: false, error: userMsg }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
