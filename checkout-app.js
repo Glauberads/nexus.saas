@@ -101,7 +101,7 @@ async function initCheckout(config) {
 
   // Inicializar Sessão Anônima via Edge Function Segura
   try {
-    const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
+    const res = await fetch(`${window.NexusTracker.config.SUPABASE_URL}/functions/v1/capture-lead`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -346,8 +346,18 @@ async function processPayment() {
       bArea.style.display = 'block';
       document.getElementById('btn-open-boleto').onclick = () => window.open(data.bankSlipUrl, '_blank');
       
-      // Para boleto, podemos redirecionar após uns segundos para a Thank You Page de pendente
-      setTimeout(() => redirectToThankYou('pending'), 10000);
+      // Para boleto, não redirecionamos automaticamente para não expulsar o usuário.
+      let btnContinue = document.getElementById('btn-continue-boleto');
+      if (!btnContinue) {
+        btnContinue = document.createElement('button');
+        btnContinue.id = 'btn-continue-boleto';
+        btnContinue.className = 'btn-secondary';
+        btnContinue.style.marginTop = '15px';
+        btnContinue.style.width = '100%';
+        btnContinue.innerText = 'Já copiei/baixei meu boleto, continuar';
+        btnContinue.onclick = () => redirectToThankYou('pending');
+        bArea.appendChild(btnContinue);
+      }
     }
 
   } catch (err) {
@@ -370,7 +380,18 @@ function copyPix() {
 function startPolling(asaasPaymentId) {
   if (checkInterval) clearInterval(checkInterval);
 
+  let attempts = 0;
+  const MAX_ATTEMPTS = 360; // 360 * 5s = 30 minutos
+
   checkInterval = setInterval(async () => {
+    attempts++;
+    
+    if (attempts >= MAX_ATTEMPTS) {
+      clearInterval(checkInterval);
+      alert("O tempo para pagamento do PIX expirou. Por favor, recarregue a página e gere um novo pedido.");
+      return;
+    }
+
     // Consulta status do checkout session via RPC segura com token
     const { data: status } = await supabaseClient.rpc('get_checkout_status', { 
       p_session_id: currentSessionId,
