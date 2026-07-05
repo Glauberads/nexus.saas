@@ -110,7 +110,7 @@ async function initCheckout(config) {
         product_slug: product.checkout_slug,
         amount: product.price,
         status: 'started',
-        correlation_id: sessionStorage.getItem('nexus_correlation_id'),
+        // correlation_id foi removido pois a tabela checkout_sessions não o possui
         ...utms
       })
     });
