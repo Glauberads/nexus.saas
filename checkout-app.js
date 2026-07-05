@@ -176,7 +176,7 @@ async function captureLead() {
 
     // Atualiza sessão via Edge Function
     if (currentSessionId && currentLeadId) {
-      fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
+      fetch(`${window.NexusTracker.config.SUPABASE_URL}/functions/v1/capture-lead`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
