@@ -257,8 +257,8 @@
       this._initCTATracking();
       this._initFAQTracking();
 
-      // Save session to Supabase
-      this._saveSession();
+      // Save session to Supabase (Legacy - Desativado)
+      // this._saveSession();
 
       // Core page tracking
       this.track('PageView', { title: document.title });
@@ -476,26 +476,8 @@
 
     // ── SESSION SAVE ───────────────────────────────────────
     async _saveSession() {
-      if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('SEU_')) return;
-      try {
-        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/sessions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': CONFIG.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
-            'Prefer': 'return=minimal,resolution=ignore-duplicates',
-          },
-          body: JSON.stringify({
-            session_id: this.sessionId,
-            device: this.device,
-            user_agent: navigator.userAgent,
-            referrer: document.referrer,
-            landing_url: window.location.href,
-            ...this.utms,
-          }),
-        });
-      } catch (_) {}
+      // Desativado: o acesso direto à tabela sessions foi revogado no hardening.
+      return;
     },
 
     // ── SCROLL TRACKING ────────────────────────────────────
@@ -621,30 +603,31 @@
       try {
         const em = leadData.email ? await sha256(leadData.email) : null;
         const ph = leadData.phone ? await sha256(leadData.phone.replace(/\D/g, '')) : null;
-        await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/leads`, {
+        
+        await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'apikey': CONFIG.SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
-            'Prefer': 'return=minimal',
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            session_id: this.sessionId,
-            name: leadData.name,
-            email: leadData.email,
-            whatsapp: leadData.phone,
-            external_id: em,
-            em_hash: em,
-            ph_hash: ph,
-            lead_score: LeadScore.score,
-            lead_tier: LeadScore.getTier(),
-            lead_status: 'new',
-            quiz_answers: leadData.quizAnswers || null,
-            device: this.device,
-            correlation_id: getCorrelationId(),
-            ...this.utms,
-          }),
+            action: 'upsert_lead',
+            leadData: {
+              session_id: this.sessionId,
+              name: leadData.name,
+              email: leadData.email,
+              whatsapp: leadData.phone,
+              external_id: em,
+              em_hash: em,
+              ph_hash: ph,
+              lead_score: LeadScore.score,
+              lead_tier: LeadScore.getTier(),
+              lead_status: 'new',
+              quiz_answers: leadData.quizAnswers || null,
+              device: this.device,
+              correlation_id: getCorrelationId(),
+              ...this.utms
+            }
+          })
         });
       } catch (e) {
         console.warn('[NexusLead]', e.message);

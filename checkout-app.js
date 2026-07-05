@@ -160,18 +160,18 @@ async function captureLead() {
 
   // Cria ou atualiza lead
   try {
-    // Tenta achar
-    let { data: lead } = await supabaseClient.from('leads').select('id').eq('email', email).single();
-    
-    if (lead) {
-      currentLeadId = lead.id;
-      await supabaseClient.from('leads').update({ name, phone }).eq('id', lead.id);
-    } else {
-      const { data: newLead } = await supabaseClient.from('leads').insert([{
-        email, name, phone, status: 'lead'
-      }]).select('id').single();
-      
-      if (newLead) currentLeadId = newLead.id;
+    // Tenta achar ou criar via Edge Function (Seguro)
+    const res = await fetch(`${window.NexusTracker.config.SUPABASE_URL}/functions/v1/capture-lead`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upsert_lead',
+        leadData: { email, name, phone, status: 'lead' }
+      })
+    });
+    const leadDataResp = await res.json();
+    if (leadDataResp && leadDataResp.id) {
+      currentLeadId = leadDataResp.id;
     }
 
     // Atualiza sessão via Edge Function
@@ -289,8 +289,6 @@ async function processPayment() {
   loader.style.display = 'flex';
 
   try {
-    // Chamada para a Edge Function asaas-create-payment
-    const { data: config } = await supabaseClient.from('app_config').select('value').eq('key', 'supabase_url').single();
     // Alternativamente podemos usar window.NexusTracker.config.SUPABASE_URL
     const edgeUrl = `${window.NexusTracker.config.SUPABASE_URL}/functions/v1/asaas-create-payment`;
 
