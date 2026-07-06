@@ -231,68 +231,128 @@
         </div>
         </div> <!-- FECHAMENTO DE tab-analytics-history -->
 
-        <!-- TAB CONTENT: LIVE ANALYTICS (NEW) -->
+        <!-- TAB CONTENT: LIVE ANALYTICS (NEW V2) -->
         <div id="tab-analytics-live" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <!-- Alertas Operacionais (Top Banner) -->
+          <div id="live-operational-alerts" style="display: none; width: 100%; margin-bottom: 24px;"></div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
             <div style="display: flex; align-items: center; gap: 16px;">
-              <h2>🔴 Live Analytics</h2>
+              <h2>🔴 Live Analytics Control Center</h2>
               <button class="btn btn-primary" onclick="if(window.NexusLiveAnalytics) window.NexusLiveAnalytics.sync(true)" style="padding: 6px 12px; font-size: 12px;">↻ Atualizar Agora</button>
             </div>
             
-            <!-- Health Monitor -->
-            <div style="display: flex; gap: 16px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);">
-              <div>Status: <strong id="live-health-status">⚪ Desconectado</strong></div>
-              <div>Latência: <strong id="live-health-latency">0 ms</strong></div>
-              <div>Eventos: <strong id="live-health-events">0</strong></div>
-              <div>Sync: <strong id="live-health-sync">Nunca</strong></div>
+            <!-- Health Monitor V2 -->
+            <div style="display: flex; gap: 16px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-ws" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> WS Status: <strong id="live-health-status">Desconectado</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-db" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> Banco de Dados: <strong id="live-health-db-status">-</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-wh" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> Webhooks Latency: <strong id="live-health-wh-latency">-</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-dlq" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> DLQ Pending: <strong id="live-health-dlq">0</strong></div>
             </div>
           </div>
 
-          <!-- Top KPIs -->
+          <!-- Top KPIs V2 -->
           <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
-            <div class="kpi-card"><h3>👀 Visitantes (Sessões) Hoje</h3><div class="kpi-value" id="live-kpi-visitors">0</div></div>
+            <!-- Visitantes Online V2 -->
+            <div class="kpi-card" style="border-top: 3px solid #3b82f6;">
+              <h3>👀 Visitantes Online (Agora)</h3>
+              <div class="kpi-value" id="live-kpi-online">0</div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 8px; display: flex; justify-content: space-between;">
+                <span>💻 Desk: <span id="live-kpi-desktop">0</span></span>
+                <span>📱 Mob: <span id="live-kpi-mobile">0</span></span>
+              </div>
+            </div>
             <div class="kpi-card"><h3>👥 Leads Hoje</h3><div class="kpi-value" id="live-kpi-leads" style="color: #3b82f6;">0</div></div>
             <div class="kpi-card" style="border-top: 3px solid #10B981;"><h3>🛍 Compras (Confirmadas)</h3><div class="kpi-value" id="live-kpi-purchases" style="color: #10B981;">0</div></div>
             <div class="kpi-card"><h3>💰 Receita Hoje</h3><div class="kpi-value" id="live-kpi-revenue">R$ 0,00</div></div>
-            <div class="kpi-card"><h3>💳 Ticket Médio</h3><div class="kpi-value" id="live-kpi-ticket">R$ 0,00</div></div>
-          </div>
-
-          <!-- Live Funnel -->
-          <div class="table-card" style="margin-bottom: 24px;">
-            <div class="table-header">
-              <h3>Funil de Conversão (Tempo Real)</h3>
-              <span class="badge" style="background: rgba(255,107,0,0.1); color: var(--accent);">Conversão Total: <span id="live-funnel-conv">0%</span></span>
-            </div>
-            <div style="display: flex; justify-content: space-between; text-align: center; padding: 16px; overflow-x: auto; gap: 16px;">
-              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">VISITANTES</div>
-                <div style="font-size: 24px; font-weight: bold;" id="live-funnel-views">0</div>
-              </div>
-              <div style="display: flex; align-items: center; color: var(--border);">➔</div>
-              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">INITIATE CHECKOUT</div>
-                <div style="font-size: 24px; font-weight: bold;" id="live-funnel-checkout">0</div>
-              </div>
-              <div style="display: flex; align-items: center; color: var(--border);">➔</div>
-              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">PIX GERADOS</div>
-                <div style="font-size: 24px; font-weight: bold; color: var(--accent);" id="live-funnel-pix">0</div>
-              </div>
-              <div style="display: flex; align-items: center; color: var(--border);">➔</div>
-              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">COMPRAS CONFIRM.</div>
-                <div style="font-size: 24px; font-weight: bold; color: var(--success);" id="live-funnel-purchases">0</div>
-              </div>
+            <div class="kpi-card">
+              <h3>🔥 Temp. do Site</h3>
+              <div class="kpi-value" id="live-site-temp" style="font-size: 20px;">CALCULANDO...</div>
             </div>
           </div>
 
-          <!-- Bottom Grid: Feed & Radar -->
+          <!-- Live Funnel & AI -->
+          <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <div class="table-card" style="margin: 0;">
+              <div class="table-header">
+                <h3>Funil de Conversão (Tempo Real)</h3>
+                <span class="badge" style="background: rgba(255,107,0,0.1); color: var(--accent);">Tempo Médio P/ Compra: <strong id="live-funnel-time">--</strong></span>
+              </div>
+              <div style="display: flex; justify-content: space-between; text-align: center; padding: 16px; overflow-x: auto; gap: 16px;">
+                <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">VISITANTES</div>
+                  <div style="font-size: 24px; font-weight: bold;" id="live-funnel-views">0</div>
+                </div>
+                <div style="display: flex; align-items: center; color: var(--border);">➔</div>
+                <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">INITIATE CHECKOUT</div>
+                  <div style="font-size: 24px; font-weight: bold;" id="live-funnel-checkout">0</div>
+                </div>
+                <div style="display: flex; align-items: center; color: var(--border);">➔</div>
+                <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">PIX GERADOS</div>
+                  <div style="font-size: 24px; font-weight: bold; color: var(--accent);" id="live-funnel-pix">0</div>
+                </div>
+                <div style="display: flex; align-items: center; color: var(--border);">➔</div>
+                <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                  <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">COMPRAS CONFIRM.</div>
+                  <div style="font-size: 24px; font-weight: bold; color: var(--success);" id="live-funnel-purchases">0</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- NEXUS AI INSIGHTS -->
+            <div class="table-card" style="margin: 0; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>🧠 NEXUS AI (Insights)</h3></div>
+              <div id="nexus-ai-insights" style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column; gap: 12px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); overflow-y: auto; max-height: 200px;">
+                <!-- AI Rules-based local insights here -->
+                <div style="font-style: italic;">Aguardando coleta de dados...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Middle Grid: Traffic, Live Timeline, PIX Pendentes -->
+          <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 24px; margin-bottom: 24px;">
+            <!-- Origem de Tráfego -->
+            <div class="table-card" style="margin: 0;">
+              <div class="table-header"><h3>🌐 Origem de Tráfego (Hoje)</h3></div>
+              <div style="overflow-y: auto; max-height: 300px; padding: 16px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                  <tbody id="live-traffic-body">
+                    <tr><td style="color: var(--text-muted);">Aguardando dados...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Live Timeline -->
+            <div class="table-card" style="margin: 0; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>⏱️ Live Timeline (Jornada)</h3></div>
+              <div style="flex-grow: 1; overflow-y: auto; max-height: 300px; padding: 16px;" id="live-timeline-body">
+                <!-- Timeline events here -->
+              </div>
+            </div>
+            
+            <!-- PIX Pendentes -->
+            <div class="table-card" style="margin: 0; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>⏳ PIX Pendentes (24h)</h3></div>
+              <div style="flex-grow: 1; overflow-y: auto; max-height: 300px; padding: 16px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                  <tbody id="live-pix-body">
+                    <tr><td style="color: var(--text-muted);">Aguardando dados...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Grid: Feed & Compras -->
           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
-            <!-- Live Feed -->
-            <div class="table-card" style="margin: 0; min-height: 400px; display: flex; flex-direction: column;">
-              <div class="table-header"><h3>⚡ Live Event Stream</h3></div>
-              <div style="flex-grow: 1; overflow-y: auto; max-height: 400px;">
-                <table style="width: 100%; border-collapse: collapse;">
+            <!-- Live Event Stream Raw -->
+            <div class="table-card" style="margin: 0; min-height: 300px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>⚡ Event Stream Raw (Todos)</h3></div>
+              <div style="flex-grow: 1; overflow-y: auto; max-height: 300px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                   <tbody id="live-feed-body">
                     <!-- Events here -->
                   </tbody>
@@ -300,23 +360,11 @@
               </div>
             </div>
             
-            <!-- Lead Radar -->
-            <div class="table-card" style="margin: 0; min-height: 400px; display: flex; flex-direction: column;">
-              <div class="table-header"><h3>🎯 Lead Radar</h3></div>
-              <div style="flex-grow: 1; overflow-y: auto; max-height: 400px;">
-                <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 12px;">
-                  <thead>
-                    <tr style="border-bottom: 1px solid var(--border);">
-                      <th style="padding: 8px;">Nome</th>
-                      <th style="padding: 8px;">E-mail</th>
-                      <th style="padding: 8px;">UTM</th>
-                      <th style="padding: 8px;">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody id="live-radar-body">
-                    <!-- Leads here -->
-                  </tbody>
-                </table>
+            <!-- Compras ao Vivo (Shopify Style) -->
+            <div class="table-card" style="margin: 0; min-height: 300px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>💳 Compras ao Vivo</h3></div>
+              <div style="flex-grow: 1; overflow-y: auto; max-height: 300px; padding: 16px; background: rgba(16, 185, 129, 0.02);" id="live-purchases-body">
+                <div style="color: var(--text-muted); font-size: 12px;">Aguardando nova compra...</div>
               </div>
             </div>
           </div>
