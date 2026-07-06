@@ -1,0 +1,19 @@
+﻿{
+  "name": "NexusSaaS",
+  "short_name": "NexusSaaS",
+  "icons": [
+    {
+      "src": "/assets/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#ff6a00",
+  "background_color": "#050505",
+  "display": "standalone"
+}
