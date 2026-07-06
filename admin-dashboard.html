@@ -234,7 +234,10 @@
         <!-- TAB CONTENT: LIVE ANALYTICS (NEW) -->
         <div id="tab-analytics-live" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-            <h2>🔴 Live Analytics</h2>
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <h2>🔴 Live Analytics</h2>
+              <button class="btn btn-primary" onclick="if(window.NexusLiveAnalytics) window.NexusLiveAnalytics.sync(true)" style="padding: 6px 12px; font-size: 12px;">↻ Atualizar Agora</button>
+            </div>
             
             <!-- Health Monitor -->
             <div style="display: flex; gap: 16px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);">
