@@ -104,13 +104,13 @@
                 
                 // V1 + V2 RPCs
                 const promises = [
-                    supabaseClient.rpc('rpc_live_dashboard').catch(e => { console.error('Erro dashboard', e); return {}; }),
-                    supabaseClient.rpc('rpc_live_funnel').catch(e => { console.error('Erro funnel', e); return {}; }),
-                    supabaseClient.rpc('rpc_live_visitors_v2').catch(e => { console.error('Erro visitors', e); return {}; }),
-                    supabaseClient.rpc('rpc_live_traffic_v2').catch(e => { console.error('Erro traffic', e); return {}; }),
-                    supabaseClient.rpc('rpc_live_pix_v2').catch(e => { console.error('Erro pix', e); return {}; }),
-                    supabaseClient.rpc('rpc_live_funnel_time_v2').catch(e => { console.error('Erro funnel_time', e); return {}; }),
-                    supabaseClient.rpc('rpc_live_health_v2').catch(e => { console.error('Erro health', e); return {}; })
+                    supabaseClient.rpc('rpc_live_dashboard'),
+                    supabaseClient.rpc('rpc_live_funnel'),
+                    supabaseClient.rpc('rpc_live_visitors_v2'),
+                    supabaseClient.rpc('rpc_live_traffic_v2'),
+                    supabaseClient.rpc('rpc_live_pix_v2'),
+                    supabaseClient.rpc('rpc_live_funnel_time_v2'),
+                    supabaseClient.rpc('rpc_live_health_v2')
                 ];
                 
                 const [dashRes, funnelRes, visRes, trafRes, pixRes, timeRes, healthRes] = await Promise.all(promises);
