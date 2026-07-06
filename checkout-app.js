@@ -325,8 +325,18 @@ async function processPayment() {
       throw new Error(errorMsg);
     }
 
-    if (window.NexusTracker && window.NexusTracker.track) {
-      window.NexusTracker.track('Payment_Created', { method: selectedPaymentMethod, payment_id: data.payment_id });
+    if (window.NexusTracker) {
+      const finalPrice = parseFloat(currentProduct.sale_price || currentProduct.price || 0);
+      window.NexusTracker.track('Payment_Created', {
+        method: selectedPaymentMethod,
+        payment_id: data.payment_id,
+        value: finalPrice,
+        currency: currentProduct.currency || 'BRL'
+      });
+      // Se for BOLETO, adiciona score
+      if (selectedPaymentMethod === 'BOLETO') {
+        window.LeadScore && window.LeadScore.add('PaymentCreated');
+      }
     }
 
     window._asaasPaymentId = data.payment_id;
