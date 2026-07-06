@@ -325,8 +325,8 @@ async function processPayment() {
       throw new Error(errorMsg);
     }
 
-    if (window.NexusTracker && window.NexusTracker.trackEvent) {
-      window.NexusTracker.trackEvent('Payment_Created', { method: selectedPaymentMethod, payment_id: data.payment_id });
+    if (window.NexusTracker && window.NexusTracker.track) {
+      window.NexusTracker.track('Payment_Created', { method: selectedPaymentMethod, payment_id: data.payment_id });
     }
 
     window._asaasPaymentId = data.payment_id;
@@ -364,8 +364,8 @@ async function processPayment() {
     releasePayBtn();
     loader.style.display = 'none';
     alert('Erro: ' + err.message);
-    if (window.NexusTracker && window.NexusTracker.trackEvent) {
-      window.NexusTracker.trackEvent('Checkout_Error', { error: err.message });
+    if (window.NexusTracker && window.NexusTracker.track) {
+      window.NexusTracker.track('Checkout_Error', { error: err.message });
     }
   }
 }
