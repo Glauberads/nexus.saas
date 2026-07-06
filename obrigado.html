@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -249,6 +249,7 @@
       const valParam = urlParams.get('val') || '0';
       const curParam = urlParams.get('cur') || 'BRL';
       const txidParam = urlParams.get('txid') || ('tx_' + Math.random().toString(36).substr(2, 9));
+      const eidParam = urlParams.get('eid'); 
       
       const card = document.getElementById('status-card');
       const upsellBox = document.getElementById('upsell-box');
@@ -296,28 +297,31 @@
       }
 
       // 2. FETCH DO PRODUTO PARA UPSELL E TRACKING ECOMMERCE
-      const productSlug = urlParams.get('product');
-      if (productSlug && window.supabaseClient) {
+      if (productSlug && productSlug !== 'unknown' && window.supabaseClient) {
         window.supabaseClient.from('products').select('id, name, checkout_config').eq('checkout_slug', productSlug).single()
           .then(({ data }) => {
-            // 2.1 TRACKING SEGURO COM ECOMMERCE COMPLETO
+            // 2.1 TRACKING SEGURO COM ECOMMERCE COMPLETO E DEDUPLICAÇÃO
+            const purchaseValue = parseFloat(valParam);
             if (status === 'paid' || status === 'approved') {
-              const trackKey = 'tracked_' + txidParam;
-              if (!localStorage.getItem(trackKey)) {
-                localStorage.setItem(trackKey, 'true');
-                if (window.NexusTracker && window.NexusTracker.track) {
-                  window.NexusTracker.track('Purchase', { 
-                    value: parseFloat(valParam), 
-                    currency: curParam,
-                    order_id: txidParam,
-                    items: [{
-                      item_id: data ? data.id : productSlug,
-                      item_name: data ? data.name : productSlug,
-                      item_category: 'SaaS',
-                      price: parseFloat(valParam),
-                      quantity: 1
-                    }]
-                  });
+              if (!isNaN(purchaseValue) && purchaseValue > 0 && eidParam) {
+                const trackKey = 'tracked_' + txidParam;
+                if (!localStorage.getItem(trackKey)) {
+                  localStorage.setItem(trackKey, 'true');
+                  if (window.NexusTracker && window.NexusTracker.track) {
+                    window.NexusTracker.track('Purchase', { 
+                      value: purchaseValue, 
+                      currency: curParam,
+                      order_id: txidParam,
+                      _eventId: eidParam,
+                      items: [{
+                        item_id: data ? data.id : productSlug,
+                        item_name: data ? data.name : productSlug,
+                        item_category: 'SaaS',
+                        price: purchaseValue,
+                        quantity: 1
+                      }]
+                    });
+                  }
                 }
               }
             }

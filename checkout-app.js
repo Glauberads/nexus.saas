@@ -329,6 +329,8 @@ async function processPayment() {
       window.NexusTracker.trackEvent('Payment_Created', { method: selectedPaymentMethod, payment_id: data.payment_id });
     }
 
+    window._asaasPaymentId = data.payment_id;
+
     if (selectedPaymentMethod === 'PIX' && data.pix) {
       document.getElementById('tab-PIX').style.display = 'none';
       document.getElementById('pix-area').style.display = 'block';
@@ -410,7 +412,10 @@ function redirectToThankYou(status) {
   const currency = currentProduct.currency || 'BRL';
   const txid = window.currentSessionToken || 'no_id';
   
-  const query = `status=${status}&product=${currentProduct.checkout_slug}&val=${finalPrice}&cur=${currency}&txid=${txid}`;
+  const paymentId = window._asaasPaymentId || '';
+  const eid = paymentId ? `purchase_${paymentId}` : '';
+  
+  const query = `status=${status}&product=${currentProduct.checkout_slug}&val=${finalPrice}&cur=${currency}&txid=${txid}&eid=${eid}`;
   const url = currentProduct.thank_you_url 
     ? `${currentProduct.thank_you_url}?${query}`
     : `obrigado.html?${query}`;
