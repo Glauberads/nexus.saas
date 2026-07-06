@@ -83,16 +83,16 @@
         // 2. SINCRONIZAÇÃO E RPCS (READ-ONLY)
         // ==========================================
         sync: async function(isInitial = false) {
-            if (!window.supabase) return;
+            if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
             
             try {
                 const startTime = performance.now();
                 
                 // Dispara RPCs em paralelo (Modular Architecture)
                 const [dashRes, funnelRes, healthRes] = await Promise.all([
-                    window.supabase.rpc('rpc_live_dashboard'),
-                    window.supabase.rpc('rpc_live_funnel'),
-                    window.supabase.rpc('rpc_live_health')
+                    supabaseClient.rpc('rpc_live_dashboard'),
+                    supabaseClient.rpc('rpc_live_funnel'),
+                    supabaseClient.rpc('rpc_live_health')
                 ]);
                 
                 const endTime = performance.now();
@@ -119,12 +119,12 @@
         // 3. REALTIME (SUPABASE)
         // ==========================================
         connect: function() {
-            if (!window.supabase || this.state.isDestroyed) return;
+            if (typeof supabaseClient === 'undefined' || !supabaseClient || this.state.isDestroyed) return;
             if (this.state.realtimeChannel) this.disconnect();
             
             console.log('[LiveAnalytics] Conectando Realtime...');
             
-            this.state.realtimeChannel = window.supabase
+            this.state.realtimeChannel = supabaseClient
                 .channel('live-analytics')
                 // Listeners dinâmicos baseados na config
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, (payload) => this.handleRealtimeEvent('events', payload))
@@ -159,9 +159,9 @@
         },
 
         disconnect: function() {
-            if (this.state.realtimeChannel) {
+            if (this.state.realtimeChannel && typeof supabaseClient !== 'undefined' && supabaseClient) {
                 console.log('[LiveAnalytics] Desconectando canal Realtime...');
-                window.supabase.removeChannel(this.state.realtimeChannel);
+                supabaseClient.removeChannel(this.state.realtimeChannel);
                 this.state.realtimeChannel = null;
             }
             this.state.isConnected = false;
