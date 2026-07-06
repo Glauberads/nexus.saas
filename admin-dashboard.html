@@ -236,18 +236,34 @@
           <!-- Alertas Operacionais (Top Banner) -->
           <div id="live-operational-alerts" style="display: none; width: 100%; margin-bottom: 24px;"></div>
 
+          <!-- MISSÃO CRÍTICA (MAIN CARD) -->
+          <div id="live-critical-mission" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); padding: 16px 24px; border-radius: 8px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <div id="live-mission-icon" style="font-size: 24px;">🟢</div>
+              <div>
+                <h3 id="live-mission-title" style="margin: 0; color: var(--success); font-size: 18px;">OPERAÇÃO NORMAL</h3>
+                <div id="live-mission-desc" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Todos os subsistemas operando em condições ideais.</div>
+              </div>
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); text-align: right;">
+              <div>NEXUSSAAS NOC V3</div>
+              <div><span id="live-mission-time">--:--:--</span></div>
+            </div>
+          </div>
+
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
             <div style="display: flex; align-items: center; gap: 16px;">
               <h2>🔴 Live Analytics Control Center</h2>
               <button class="btn btn-primary" onclick="if(window.NexusLiveAnalytics) window.NexusLiveAnalytics.sync(true)" style="padding: 6px 12px; font-size: 12px;">↻ Atualizar Agora</button>
             </div>
             
-            <!-- Health Monitor V2 -->
+            <!-- Health Monitor V3 -->
             <div style="display: flex; gap: 16px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap;">
-              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-ws" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> WS Status: <strong id="live-health-status">Desconectado</strong></div>
-              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-db" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> Banco de Dados: <strong id="live-health-db-status">-</strong></div>
-              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-wh" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> Webhooks Latency: <strong id="live-health-wh-latency">-</strong></div>
-              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-dlq" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> DLQ Pending: <strong id="live-health-dlq">0</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-ws" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> WS: <strong id="live-health-status">Desconectado</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-db" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> DB: <strong id="live-health-db-status">-</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-wh" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> Webhooks: <strong id="live-health-wh-latency">-</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-dlq" style="width:8px;height:8px;border-radius:50%;background:#555;"></div> DLQ: <strong id="live-health-dlq">0</strong></div>
+              <div style="display: flex; align-items: center; gap: 4px;"><div id="health-led-edge" style="width:8px;height:8px;border-radius:50%;background:var(--success);"></div> Edge Functions: <strong>OK</strong></div>
             </div>
           </div>
 
@@ -365,6 +381,41 @@
               <div class="table-header"><h3>💳 Compras ao Vivo</h3></div>
               <div style="flex-grow: 1; overflow-y: auto; max-height: 300px; padding: 16px; background: rgba(16, 185, 129, 0.02);" id="live-purchases-body">
                 <div style="color: var(--text-muted); font-size: 12px;">Aguardando nova compra...</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- NOVO GRID (V3): HEATMAP & GA4 & ADS & MAPA (Placeholders) -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 24px; margin-bottom: 24px;">
+            <!-- Operational Heatmap -->
+            <div class="table-card" style="margin: 0; min-height: 200px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>🔥 Heatmap Operacional</h3></div>
+              <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; font-style: italic;">
+                [Aguardando processamento de heat map interno...]
+              </div>
+            </div>
+            
+            <!-- Integração GA4 -->
+            <div class="table-card" style="margin: 0; min-height: 200px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>📈 Dashboard GA4</h3></div>
+              <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; font-style: italic;">
+                [Aguardando integração API do Google Analytics 4...]
+              </div>
+            </div>
+            
+            <!-- Dashboard Campanhas (Ads) -->
+            <div class="table-card" style="margin: 0; min-height: 200px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>📣 Dashboard de Campanhas (Meta/Google Ads)</h3></div>
+              <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; font-style: italic;">
+                [Aguardando integração com APIs de Ads...]
+              </div>
+            </div>
+            
+            <!-- Mapa do Brasil -->
+            <div class="table-card" style="margin: 0; min-height: 200px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>🗺️ Mapa de Densidade (Brasil)</h3></div>
+              <div id="map-container" style="flex-grow: 1; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 12px; font-style: italic;">
+                [Aguardando módulo D3.js...]
               </div>
             </div>
           </div>
