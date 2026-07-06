@@ -245,9 +245,11 @@ As variáveis (injetadas no Supabase e no arquivo config frontend) gerenciam:
 
 - **Módulos Concluídos e Estáveis:**
   - Tracking Avançado (Meta, CAPI, UTMs).
-  - CRM Simplificado e Lead Scoring.
+  - CRM Simplificado e Lead Scoring (com Refresh Dinâmico).
   - Checkout Transparente c/ Integração Asaas.
   - Hardening RLS (Fase 1, 3 e 4 completadas no DB).
+  - Operations Center V3 (Live Analytics em tempo real c/ Missão Crítica).
+  - SEO Completo (OG Image, Twitter Cards, Web Manifest e Favicons).
 - **Módulos em Evolução (Experimentais/Aprimoramento):**
   - Split Financeiro (Logs já criados, mas orquestração complexa com afiliados ainda em testes).
   - Dead Letter Queue e Retries de webhooks (Módulo recém introduzido no `sre_reliability.sql`).
