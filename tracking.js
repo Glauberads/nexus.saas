@@ -545,7 +545,6 @@
         btn.addEventListener('click', () => {
           const id = btn.id || 'unknown';
           const location = id.includes('hero') ? 'hero' : id.includes('pricing') || id.includes('main') ? 'pricing' : id.includes('final') ? 'final' : 'other';
-          this.track('InitiateCheckout', { cta_id: id, cta_location: location });
           if (location === 'hero') this.track('CTAHeroClick', { cta_id: id });
           if (location === 'pricing') this.track('CTAPricingClick', { cta_id: id });
           if (location === 'final') this.track('CTAFinalClick', { cta_id: id });

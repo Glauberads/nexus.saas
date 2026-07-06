@@ -645,12 +645,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Explicit tracking for Pricing CTA (InitiateCheckout)
+  // Explicit tracking for Pricing CTA (InitiateCheckout removed)
   const mainPricingCta = document.getElementById('main-cta-btn');
   if (mainPricingCta) {
     mainPricingCta.addEventListener('click', () => {
       if (window.NexusTracker) {
-        window.NexusTracker.track('InitiateCheckout');
+        // Removed InitiateCheckout here to prevent false 0 values.
+        // It's handled properly by checkout-app.js
       }
     });
   }
