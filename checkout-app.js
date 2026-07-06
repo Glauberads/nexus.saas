@@ -73,16 +73,27 @@ async function initCheckout(config) {
   
   const priceContainer = document.getElementById('product-price');
   
-  if (salePrice > 0) {
-    priceContainer.innerHTML = `
-      <span style="font-size: 14px; text-decoration: line-through; color: var(--text-muted); display: block; margin-bottom: 4px;">De ${formatter.format(basePrice)}</span>
-      <span style="font-size: 32px; font-weight: 800; color: var(--success);">Por ${formatter.format(salePrice)}</span>
-    `;
-    currentProduct.finalPrice = salePrice;
-  } else {
-    priceContainer.textContent = formatter.format(basePrice);
-    currentProduct.finalPrice = basePrice;
-  }
+  // Calculate final price correctly
+  currentProduct.finalPrice = salePrice > 0 ? salePrice : basePrice;
+  
+  const installmentValue = currentProduct.finalPrice / 12;
+  const formattedInstallment = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: product.currency || 'BRL' }).format(installmentValue);
+  const formattedFullPrice = formatter.format(currentProduct.finalPrice);
+
+  const dailyValue = currentProduct.finalPrice / 365;
+  const formattedDaily = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: product.currency || 'BRL' }).format(dailyValue);
+
+  priceContainer.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <span style="font-size: 13px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Por apenas</span>
+      <span style="font-size: 36px; font-weight: 900; color: var(--success); line-height: 1.1;">12x de ${formattedInstallment}</span>
+      <span style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">ou ${formattedFullPrice} à vista</span>
+      
+      <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 6px 12px; border-radius: 6px; margin-top: 12px; max-width: fit-content;">
+        <span style="font-size: 12px; font-weight: 600; color: var(--success);">🎯 Menos de ${formattedDaily} por dia</span>
+      </div>
+    </div>
+  `;
 
   if (product.thumbnail_url) {
     document.getElementById('product-cover').style.backgroundImage = `url('${product.thumbnail_url}')`;
