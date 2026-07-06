@@ -120,6 +120,16 @@ function initUI() {
       
       if (window.innerWidth <= 768 && sidebar) sidebar.classList.remove('active');
       
+      // LIVE ANALYTICS LAZY LOAD & DESTROY
+      if (window.NexusLiveAnalytics) {
+        const liveTabBtn = document.getElementById('tab-btn-live');
+        if (currentModule === 'module-analytics' && liveTabBtn && liveTabBtn.classList.contains('active')) {
+          window.NexusLiveAnalytics.init();
+        } else {
+          window.NexusLiveAnalytics.destroy();
+        }
+      }
+      
       loadModuleData(currentModule);
     });
   });

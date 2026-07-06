@@ -163,9 +163,17 @@
 
       <!-- MODULE 1.5: ANALYTICS EXECUTIVO -->
       <section id="module-analytics" class="module-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-          <h2>📊 Analytics Executivo</h2>
-          <div style="display: flex; gap: 8px;">
+        <!-- TABS -->
+        <div style="display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px;">
+          <button id="tab-btn-history" class="finance-tab active" onclick="switchAnalyticsTab('history')">Dashboard Histórico</button>
+          <button id="tab-btn-live" class="finance-tab" onclick="switchAnalyticsTab('live')" style="color: var(--success);">🔴 Live Analytics</button>
+        </div>
+
+        <!-- TAB CONTENT: HISTORY (EXISTING) -->
+        <div id="tab-analytics-history" style="display: block;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+            <h2>📊 Analytics Executivo</h2>
+            <div style="display: flex; gap: 8px;">
             <button id="btn-export-csv" class="btn" style="background: var(--bg-card); border: 1px solid var(--border);">⬇ CSV</button>
             <button id="btn-export-pdf" class="btn" style="background: var(--bg-card); border: 1px solid var(--border);">🖨 Imprimir PDF</button>
             <button id="btn-refresh-analytics" class="btn btn-primary">↻ Atualizar</button>
@@ -221,6 +229,116 @@
             </table>
           </div>
         </div>
+
+        <!-- TAB CONTENT: LIVE ANALYTICS (NEW) -->
+        <div id="tab-analytics-live" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2>🔴 Live Analytics</h2>
+            
+            <!-- Health Monitor -->
+            <div style="display: flex; gap: 16px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);">
+              <div>Status: <strong id="live-health-status">⚪ Desconectado</strong></div>
+              <div>Latência: <strong id="live-health-latency">0 ms</strong></div>
+              <div>Eventos: <strong id="live-health-events">0</strong></div>
+              <div>Sync: <strong id="live-health-sync">Nunca</strong></div>
+            </div>
+          </div>
+
+          <!-- Top KPIs -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
+            <div class="kpi-card"><h3>👀 Visitantes (Sessões) Hoje</h3><div class="kpi-value" id="live-kpi-visitors">0</div></div>
+            <div class="kpi-card"><h3>👥 Leads Hoje</h3><div class="kpi-value" id="live-kpi-leads" style="color: #3b82f6;">0</div></div>
+            <div class="kpi-card" style="border-top: 3px solid #10B981;"><h3>🛍 Compras (Confirmadas)</h3><div class="kpi-value" id="live-kpi-purchases" style="color: #10B981;">0</div></div>
+            <div class="kpi-card"><h3>💰 Receita Hoje</h3><div class="kpi-value" id="live-kpi-revenue">R$ 0,00</div></div>
+            <div class="kpi-card"><h3>💳 Ticket Médio</h3><div class="kpi-value" id="live-kpi-ticket">R$ 0,00</div></div>
+          </div>
+
+          <!-- Live Funnel -->
+          <div class="table-card" style="margin-bottom: 24px;">
+            <div class="table-header">
+              <h3>Funil de Conversão (Tempo Real)</h3>
+              <span class="badge" style="background: rgba(255,107,0,0.1); color: var(--accent);">Conversão Total: <span id="live-funnel-conv">0%</span></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; text-align: center; padding: 16px; overflow-x: auto; gap: 16px;">
+              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">VISITANTES</div>
+                <div style="font-size: 24px; font-weight: bold;" id="live-funnel-views">0</div>
+              </div>
+              <div style="display: flex; align-items: center; color: var(--border);">➔</div>
+              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">INITIATE CHECKOUT</div>
+                <div style="font-size: 24px; font-weight: bold;" id="live-funnel-checkout">0</div>
+              </div>
+              <div style="display: flex; align-items: center; color: var(--border);">➔</div>
+              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">PIX GERADOS</div>
+                <div style="font-size: 24px; font-weight: bold; color: var(--accent);" id="live-funnel-pix">0</div>
+              </div>
+              <div style="display: flex; align-items: center; color: var(--border);">➔</div>
+              <div style="flex: 1; background: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">COMPRAS CONFIRM.</div>
+                <div style="font-size: 24px; font-weight: bold; color: var(--success);" id="live-funnel-purchases">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Grid: Feed & Radar -->
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+            <!-- Live Feed -->
+            <div class="table-card" style="margin: 0; min-height: 400px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>⚡ Live Event Stream</h3></div>
+              <div style="flex-grow: 1; overflow-y: auto; max-height: 400px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tbody id="live-feed-body">
+                    <!-- Events here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Lead Radar -->
+            <div class="table-card" style="margin: 0; min-height: 400px; display: flex; flex-direction: column;">
+              <div class="table-header"><h3>🎯 Lead Radar</h3></div>
+              <div style="flex-grow: 1; overflow-y: auto; max-height: 400px;">
+                <table style="width: 100%; text-align: left; border-collapse: collapse; font-size: 12px;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid var(--border);">
+                      <th style="padding: 8px;">Nome</th>
+                      <th style="padding: 8px;">E-mail</th>
+                      <th style="padding: 8px;">UTM</th>
+                      <th style="padding: 8px;">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody id="live-radar-body">
+                    <!-- Leads here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        
+        <!-- Tab Switching Logic for Analytics -->
+        <script>
+          function switchAnalyticsTab(tab) {
+            document.getElementById('tab-btn-history').classList.remove('active');
+            document.getElementById('tab-btn-live').classList.remove('active');
+            document.getElementById('tab-analytics-history').style.display = 'none';
+            document.getElementById('tab-analytics-live').style.display = 'none';
+            
+            document.getElementById(`tab-btn-${tab}`).classList.add('active');
+            document.getElementById(`tab-analytics-${tab}`).style.display = 'block';
+            
+            if (window.NexusLiveAnalytics) {
+              if (tab === 'live') {
+                window.NexusLiveAnalytics.init();
+              } else {
+                window.NexusLiveAnalytics.destroy();
+              }
+            }
+          }
+        </script>
       </section>
 
       <!-- MODULE 1.5: SRE STATUS -->
@@ -1360,6 +1478,7 @@
   </div>
 
   <script src="tracking.js"></script>
+  <script src="admin-live-analytics.js"></script>
   <script src="supabase-client.js"></script>
   <script src="admin-app.js"></script>
   <script src="admin-fin-logs.js"></script>
