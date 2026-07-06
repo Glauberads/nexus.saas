@@ -517,7 +517,10 @@
           <div class="table-header" style="flex-wrap: wrap;">
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
               <h3>Base de Leads</h3>
-              <button class="btn-login" style="width: auto; padding: 6px 12px; font-size: 13px;" onclick="exportLeadsToCSV()">📥 Exportar CSV</button>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-login" style="width: auto; padding: 6px 12px; font-size: 13px; background: transparent; border: 1px solid var(--border); color: var(--text-primary);" onclick="loadLeadsModule()">🔄 Atualizar</button>
+                <button class="btn-login" style="width: auto; padding: 6px 12px; font-size: 13px;" onclick="exportLeadsToCSV()">📥 Exportar CSV</button>
+              </div>
             </div>
             <div class="table-filters" style="margin-top: 16px; width: 100%;">
               <input type="text" placeholder="Buscar por nome ou e-mail...">
