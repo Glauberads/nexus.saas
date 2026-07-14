@@ -141,8 +141,9 @@
                 
                 // Mapeia PIX
                 if (pixRes && pixRes.data) {
-                    // Substituimos a fila de pending pelo agregado diário nas variaveis V3.
-                    // PIX Pendentes list function vai ser baseada nos dados Realtime (raw).
+                    if (pixRes.data.pending_list) {
+                        this.state.v3.pix_pending = pixRes.data.pending_list;
+                    }
                 }
                 
                 if (timeRes && timeRes.data) this.state.v3.avg_funnel_time = timeRes.data.avg_funnel_seconds || 0;

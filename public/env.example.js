@@ -1,0 +1,12 @@
+window.ENV = {
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: "",
+  META_PIXEL_ID: "",
+  GA4_ID: "",
+  GTM_ID: "",
+  CLARITY_ID: "",
+  GADS_CONVERSION_ID: "",
+  GADS_LEAD_LABEL: "",
+  GADS_CHECKOUT_LABEL: "",
+  CHECKOUT_URL: ""
+};

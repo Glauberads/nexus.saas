@@ -1698,14 +1698,14 @@ async function loadProductsModule() {
 
     const pVersions = versions ? versions.filter(v => v.product_id === p.id) : [];
     const currentV = pVersions.find(v => v.is_current) || pVersions[0];
-    const vText = currentV ? currentV.version : 'Sem versÃ£o';
+    const vText = currentV ? currentV.version : 'Sem versão';
 
     tr.innerHTML = `
       <td>
         <img src="${p.thumbnail_url || 'https://via.placeholder.com/60x60/161616/8B5CF6?text=' + p.name.charAt(0)}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
       </td>
       <td>
-        <div style="font-weight: 600;">${p.name} ${p.is_featured ? 'â­' : ''}</div>
+        <div style="font-weight: 600;">${p.name} ${p.is_featured ? '⭐' : ''}</div>
         <div style="font-size: 11px; color: var(--text-muted); font-family: monospace;">/${p.slug}</div>
       </td>
       <td style="font-weight: 600;">${formatter.format(pPrice)}</td>
@@ -1716,11 +1716,12 @@ async function loadProductsModule() {
       </td>
       <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${p.status}</td>
       <td>
-        <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 200px;">
-          <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">âœï¸ Editar</button>
-          <button onclick="window.openQuickPrice('${p.id}', ${pPrice}, ${sPrice})" style="background: none; border: 1px solid var(--border); color: var(--success); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">ðŸ’° PreÃ§o</button>
-          <button onclick="window.openVersionsModal('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">ðŸ“¦ VersÃµes</button>
-          <button onclick="window.open('checkout.html?product=${p.checkout_slug || p.slug}', '_blank')" style="background: none; border: 1px solid var(--border); color: #3B82F6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">ðŸš€ Checkout</button>
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; max-width: 220px;">
+          <button onclick="window.editProduct('${p.id}')" style="background: none; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">✏️ Editar</button>
+          <button onclick="window.openQuickPrice('${p.id}', ${pPrice}, ${sPrice})" style="background: none; border: 1px solid var(--border); color: var(--success); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">💰 Preço</button>
+          <button onclick="window.openVersionsModal('${p.id}', '${p.name.replace(/'/g, "\\'")}')" style="background: none; border: 1px solid var(--border); color: #8B5CF6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">📦 Versões</button>
+          <button onclick="window.open('checkout.html?product=${p.checkout_slug || p.slug}', '_blank')" style="background: none; border: 1px solid var(--border); color: #3B82F6; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">🚀 Checkout</button>
+          <button onclick="window.open('admin-checkout-builder.html?product_id=${p.id}&product=${p.checkout_slug || p.slug}', '_blank')" style="background: none; border: 1px solid var(--border); color: #F59E0B; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">🎨 Customizar</button>
         </div>
       </td>
     `;
@@ -2059,13 +2060,22 @@ async function loadVersionsList() {
   const tbody = document.getElementById('versions-tbody');
   tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Carregando...</td></tr>';
   
-  const { data: versions } = await supabaseClient.from('product_versions')
+  const { data: versions, error } = await supabaseClient.from('product_versions')
     .select('*').eq('product_id', currentVersionProductId)
     .order('created_at', { ascending: false });
     
+  if (error) {
+    console.error("Erro ao carregar versões:", error);
+    if (error.message && error.message.includes("relation") && error.message.includes("does not exist")) {
+      alert("A tabela 'product_versions' não existe no banco de dados. Por favor, execute o script SQL '2026_06_16_cms_module.sql' no Supabase.");
+    } else {
+      alert("Erro ao carregar versões: " + error.message);
+    }
+  }
+    
   tbody.innerHTML = '';
   if (!versions || versions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma versÃ£o cadastrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma versão cadastrada.</td></tr>';
     return;
   }
   
@@ -2076,7 +2086,7 @@ async function loadVersionsList() {
       <td>${new Date(v.created_at).toLocaleDateString('pt-BR')}</td>
       <td style="font-size: 11px; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${v.changelog || ''}</td>
       <td>
-        <button style="background:none; border:none; color: var(--danger); cursor:pointer;" onclick="alert('Funcionalidade em desenvolvimento')">ðŸ—‘ï¸</button>
+        <button style="background:none; border:none; color: var(--danger); cursor:pointer;" onclick="alert('Funcionalidade em desenvolvimento')">🗑️</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -2089,13 +2099,17 @@ window.saveVersion = async function() {
   const file_size = document.getElementById('v-size').value;
   const changelog = document.getElementById('v-changelog').value;
   
-  if (!version) return alert("VersÃ£o Ã© obrigatÃ³ria.");
+  if (!version) return alert("Versão é obrigatória.");
   
   // Mark others as not current
-  await supabaseClient.from('product_versions').update({ is_current: false }).eq('product_id', currentVersionProductId);
+  const { error: updateErr } = await supabaseClient.from('product_versions').update({ is_current: false }).eq('product_id', currentVersionProductId);
+  if (updateErr) {
+    console.error(updateErr);
+    return alert("Erro ao atualizar versões antigas: " + updateErr.message);
+  }
   
   // Insert new
-  await supabaseClient.from('product_versions').insert([{
+  const { error: insertErr } = await supabaseClient.from('product_versions').insert([{
     product_id: currentVersionProductId,
     version,
     download_url,
@@ -2103,6 +2117,10 @@ window.saveVersion = async function() {
     changelog,
     is_current: true
   }]);
+  if (insertErr) {
+    console.error(insertErr);
+    return alert("Erro ao salvar versão: " + insertErr.message);
+  }
   
   // Update parent product download_url as fallback
   await supabaseClient.from('products').update({ download_url }).eq('id', currentVersionProductId);

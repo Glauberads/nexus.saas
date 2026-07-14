@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="admin-dashboard.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Supabase -->
+  <script src="env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -735,9 +736,6 @@
             </table>
           </div>
         </div>
-        
-        <!-- Toast Notification Container -->
-        <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px;"></div>
       </section>
 
       <section id="module-events" class="module-section">
@@ -1419,95 +1417,201 @@
         <div id="modal-quick-price" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
           <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 400px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; padding: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-              <h3 style="font-size: 16px; margin: 0; color: white;">💰 Alterar Preço</h3>
-              <button onclick="document.getElementById('modal-quick-price').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
-            </div>
-            
-            <input type="hidden" id="quick-price-id">
-            
-            <div style="margin-bottom: 16px;">
-              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Base / Original (R$)</label>
-              <input type="number" step="0.01" id="quick-price-base" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px; font-size: 16px;" placeholder="997.00">
-            </div>
-            
-            <div style="margin-bottom: 24px;">
-              <label style="display: block; font-size: 12px; color: var(--success); margin-bottom: 4px;">Preço Promocional (R$)</label>
-              <input type="number" step="0.01" id="quick-price-sale" style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid var(--success); color: white; border-radius: 4px; font-size: 16px;" placeholder="497.00">
-              <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Deixe 0 ou vazio para não usar promoção.</p>
-            </div>
-
-            <button onclick="window.saveQuickPrice()" class="btn-primary" style="width: 100%; background: var(--success); color: #000; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Salvar Preço</button>
+            <h3 style="font-size: 11px;">Cobranças Totais</h3>
+            <div class="kpi-value" id="kpi-fin-total-charges" style="font-size: 24px;">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Aprovadas / Recebidas</h3>
+            <div class="kpi-value" id="kpi-fin-approved" style="font-size: 24px; color: var(--success);">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Vencidas / Falhas</h3>
+            <div class="kpi-value" id="kpi-fin-failed" style="font-size: 24px; color: var(--danger);">0</div>
+          </div>
+          <div class="kpi-card">
+            <h3 style="font-size: 11px;">Com Split</h3>
+            <div class="kpi-value" id="kpi-fin-splits" style="font-size: 24px; color: var(--accent);">0</div>
           </div>
         </div>
 
-      </section>
-
-      <!-- MODULE 12: AREA DE MEMBROS -->
-      <section id="module-members" class="module-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-          <div>
-            <h2>🎓 Área de Membros (Gestão)</h2>
-            <p style="color: var(--text-secondary);">Controle de acessos, downloads, licenças e retenção.</p>
-          </div>
-          <button class="btn-primary" onclick="window.open('cliente-login.html', '_blank')" style="background: #8B5CF6; color: white; padding: 8px 16px; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Acessar Portal do Cliente ↗</button>
-        </div>
-
-        <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-          <div class="kpi-card" style="border-top: 3px solid #8B5CF6;">
-            <h3 style="font-size: 11px;">Membros Ativos</h3>
-            <div class="kpi-value" id="kpi-members-active" style="font-size: 24px; color: #8B5CF6;">0</div>
-          </div>
-          <div class="kpi-card">
-            <h3 style="font-size: 11px;">Taxa de Ativação</h3>
-            <div class="kpi-value" id="kpi-members-activation" style="font-size: 24px;">0%</div>
-            <div class="kpi-trend" style="color: var(--text-muted); font-size: 10px;">Completaram Onboarding</div>
-          </div>
-          <div class="kpi-card">
-            <h3 style="font-size: 11px;">Downloads</h3>
-            <div class="kpi-value" id="kpi-members-downloads" style="font-size: 24px;">0</div>
-          </div>
-          <div class="kpi-card">
-            <h3 style="font-size: 11px;">Licenças Ativas</h3>
-            <div class="kpi-value" id="kpi-members-licenses" style="font-size: 24px;">0</div>
-          </div>
-          <div class="kpi-card">
-            <h3 style="font-size: 11px;">MRR / Receita</h3>
-            <div class="kpi-value" id="kpi-members-mrr" style="font-size: 24px; color: var(--success);">R$ 0</div>
-          </div>
-        </div>
-
-        <div class="table-card">
+        <div class="table-card" style="margin-top: 24px;">
           <div class="table-header">
-            <h3>Gestão de Acessos</h3>
-            <div class="table-filters">
-              <input type="text" id="search-members" placeholder="Buscar por nome ou email..." style="width: 250px;">
+            <h3>Registro de Eventos</h3>
+            <div class="table-filters" style="display: flex; gap: 8px;">
+              <select id="fin-filter-status" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 6px 12px; border-radius: 4px; outline: none; font-size: 13px;">
+                <option value="all">Todos os Status</option>
+                <option value="RECEIVED">Recebido</option>
+                <option value="CONFIRMED">Confirmado</option>
+                <option value="PENDING">Pendente</option>
+                <option value="OVERDUE">Vencido</option>
+                <option value="FAILED">Falho</option>
+              </select>
+              <input type="text" id="search-fin-logs" placeholder="Buscar ID, Cliente..." style="width: 250px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; padding: 6px 12px; border-radius: 4px; outline: none; font-size: 13px;">
             </div>
           </div>
-          <table style="font-size: 13px;">
-            <thead>
-              <tr>
-                <th>Membro</th>
-                <th>Contato</th>
-                <th>Status</th>
-                <th>Último Acesso</th>
-                <th>Score</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody id="members-tbody">
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Carregando membros...</td></tr>
-            </tbody>
-          </table>
+          <div style="overflow-x: auto;">
+            <table style="font-size: 12px; width: 100%; text-align: left; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Data</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Produto</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Cliente</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Valor</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Status</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Split</th>
+                  <th style="padding: 12px; border-bottom: 1px solid var(--border);">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="fin-logs-tbody">
+                <tr><td colspan="7" style="text-align: center; padding: 24px; color: var(--text-muted);">Carregando logs...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      <section id="module-config" class="module-section"><h2>Configurações do Sistema</h2><p style="color: var(--text-muted)">Ajustes de Pixel, GA4 e Edge Functions.</p></section>
+    </div>
+  </div>
 
-      <section id="module-fin-logs" class="module-section">
-        <h2>💰 Logs Financeiros</h2>
-        
-        <div class="kpi-grid">
-          <div class="kpi-card">
+  <!-- DRAWER: LEAD DETAIL -->
+  <div class="drawer-overlay" id="drawer-overlay">
+    <div class="drawer-panel" id="drawer-panel">
+      <div class="drawer-header">
+        <div>
+          <div class="drawer-title" id="drawer-name">Lead Detail</div>
+          <div class="drawer-subtitle" id="drawer-email">...</div>
+        </div>
+        <button class="drawer-close" id="drawer-close">✕</button>
+      </div>
+      <div class="drawer-body">
+        <h3>Ações Adicionais</h3>
+        <div style="display: flex; gap: 8px; margin-bottom: 32px;">
+          <button style="padding: 8px 12px; background: var(--success-bg); color: var(--success); border: none; border-radius: 4px; font-weight: 600; font-size: 12px; cursor: pointer;">WhatsApp App</button>
+        </div>
+
+        <h3>Timeline (Jornada)</h3>
+        <div class="timeline" id="drawer-timeline">
+          <!-- Timeline events injected here via admin-app.js -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRAWER: FIN LOG DETAIL -->
+  <div class="drawer-overlay" id="drawer-fin-overlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; backdrop-filter: blur(2px);">
+    <div class="drawer-panel" id="drawer-fin-panel" style="position: absolute; top: 0; right: -500px; width: 500px; max-width: 100%; height: 100%; background: #121214; border-left: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; transition: right 0.3s ease; box-shadow: -5px 0 25px rgba(0,0,0,0.5); overflow-y: auto;">
+      <div class="drawer-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 16px;">
+        <div>
+          <div class="drawer-title" id="dfin-title" style="font-size: 18px; font-weight: 700; color: white;">Detalhes do Log</div>
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Descrição Curta</label>
+                  <input type="text" id="prod-upsell-desc" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: Adicione nossa Instalação Profissional por apenas...">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Antigo (Ancoragem)</label>
+                    <input type="text" id="prod-upsell-old-price" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: R$ 1.500">
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Preço Atual</label>
+                    <input type="text" id="prod-upsell-new-price" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: R$ 297">
+                  </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                  <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Benefícios (Uma linha por benefício)</label>
+                  <textarea id="prod-upsell-benefits" rows="4" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px; resize: vertical;" placeholder="Configuração de DNS\nIntegração de Pagamento\n..."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vídeo do Upsell (URL do YouTube/Vimeo)</label>
+                    <input type="text" id="prod-upsell-video" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://www.youtube.com/watch?v=...">
+                  </div>
+                  <div>
+                    <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Imagem do Upsell (URL ou Upload)</label>
+                    <div style="display: flex; gap: 8px;">
+                      <input type="text" id="prod-upsell-image" style="flex: 1; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;" placeholder="Ex: https://meusite.com/img.png">
+                      <label for="prod-upsell-image-file" style="background: #10B981; color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; white-space: nowrap; margin: 0;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Upload
+                      </label>
+                      <input type="file" id="prod-upsell-image-file" accept="image/*" style="display: none;" onchange="window.uploadUpsellImage(this)">
+                    </div>
+                  </div>
+                </div>
+              <!-- BLOCO: COPRODUÇÃO / SPLIT DE RECEBIMENTO -->
+              <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                <h3 style="font-size: 14px; margin-bottom: 16px; color: var(--accent);">Coprodução e Split de Recebimento (Asaas)</h3>
+                
+                <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="prod-split-enabled" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                  <label for="prod-split-enabled" style="font-size: 14px; color: var(--text-primary); cursor: pointer;">Ativar Split automático para este produto</label>
+                </div>
+
+                <div id="split-receivers-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                  <!-- As linhas de parceiros serão injetadas aqui pelo admin-app.js -->
+                </div>
+
+                <button onclick="window.addSplitRow()" type="button" style="background: rgba(255,255,255,0.05); border: 1px dashed var(--border); color: var(--text-primary); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; margin-bottom: 16px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Adicionar Parceiro/Recebedor
+                </button>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">URL da Documentação (Opcional)</label>
+              <input type="text" id="prod-doc" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white; border-radius: 4px;">
+            </div>
+
+            <button onclick="saveProduct()" class="btn-primary" style="width: 100%; background: #F59E0B; color: #000; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Salvar Produto</button>
+          </div>
+        </div>
+
+        <!-- MODAL: VERSÕES -->
+        <div id="modal-versions" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 700px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; max-height: 90vh; overflow-y: auto; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+              <h3 style="font-size: 16px; margin: 0; color: white;">Gerenciar Versões: <span id="v-prod-name" style="color: #8B5CF6;"></span></h3>
+              <button onclick="document.getElementById('modal-versions').style.display='none'" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px; border: 1px dashed var(--border); margin-bottom: 24px;">
+              <h4 style="margin-bottom: 12px; color: var(--text-secondary); font-size: 13px;">Lançar Nova Versão</h4>
+              <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 12px;">
+                <input type="text" id="v-version" placeholder="Versão (ex: 1.2.0)" style="width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px;">
+                <input type="text" id="v-download" placeholder="URL de Download (S3, Drive, R2)" style="width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px;">
+              </div>
+              <input type="text" id="v-size" placeholder="Tamanho (ex: 24MB)" style="width: 100%; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px; margin-bottom: 12px;">
+              <textarea id="v-changelog" placeholder="O que há de novo? (Changelog)" style="width: 100%; height: 60px; padding: 8px; background: #121214; border: 1px solid var(--border); color: white; border-radius: 4px; margin-bottom: 12px;"></textarea>
+              <button onclick="saveVersion()" style="padding: 8px 16px; background: #22C55E; border: none; color: white; font-weight: 700; border-radius: 4px; cursor: pointer;">Publicar Nova Versão</button>
+            </div>
+
+            <table style="font-size: 13px;">
+              <thead>
+                <tr>
+                  <th>Versão</th>
+                  <th>Data</th>
+                  <th>Changelog</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="versions-tbody">
+                <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Carregando versões...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MODAL RÁPIDO: ALTERAR PREÇO -->
+        <div id="modal-quick-price" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+          <div style="background: #161616; border: 1px solid var(--border); border-radius: 12px; width: 400px; width: min(100%, calc(100vw - 32px)); max-width: 100%; box-sizing: border-box; margin-inline: auto; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
             <h3 style="font-size: 11px;">Cobranças Totais</h3>
             <div class="kpi-value" id="kpi-fin-total-charges" style="font-size: 24px;">0</div>
           </div>
@@ -1599,15 +1703,21 @@
         <button class="drawer-close" onclick="window.closeFinDrawer()" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">✕</button>
       </div>
       <div class="drawer-body" id="dfin-body" style="font-size: 13px; color: var(--text-primary); display: flex; flex-direction: column; gap: 16px;">
-        <!-- Injetado dinamicamente -->
+      <!-- Injetado dinamicamente -->
       </div>
     </div>
   </div>
+
+  <!-- MODULE 12: AREA DE MEMBROS (injetado via JS) -->
+  <div id="members-module-mount"></div>
 
   <script src="tracking.js"></script>
   <script src="admin-live-analytics.js"></script>
   <script src="supabase-client.js"></script>
   <script src="admin-app.js"></script>
   <script src="admin-fin-logs.js"></script>
+  <script src="admin-members.js"></script>
+  <!-- Toast Notification Container (Global) -->
+  <div id="toast-container" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px;"></div>
 </body>
 </html>

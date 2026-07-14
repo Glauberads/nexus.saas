@@ -5,6 +5,62 @@ let currentSessionId = null;
 let selectedPaymentMethod = 'PIX';
 let checkInterval = null;
 
+const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
+
+function getPersistedAttribution() {
+  const params = new URLSearchParams(window.location.search);
+  const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid', 'ttclid', 'msclkid'];
+  const result = {};
+
+  const sanitize = (value) => {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    if (!normalized || normalized.toLowerCase() === 'null' || normalized.toLowerCase() === 'undefined') {
+      return null;
+    }
+    return normalized;
+  };
+
+  keys.forEach(k => {
+    const val = sanitize(params.get(k));
+    if (val) result[k] = val;
+  });
+
+  try {
+    const stored = localStorage.getItem('nexus_utms');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      keys.forEach(k => {
+        const val = sanitize(parsed[k]);
+        if (!result[k] && val) result[k] = val;
+      });
+    }
+  } catch (error) {
+    if (window.ENV && window.ENV.DEBUG_TRACKING) {
+      console.warn('[NexusUTM] Falha ao ler localStorage:', error);
+    }
+  }
+
+  try {
+    const cookies = document.cookie.split(';');
+    const cookieData = {};
+    cookies.forEach(c => {
+      const match = c.trim().match(/^nexus_([^=]+)=(.+)$/);
+      if (match) cookieData[match[1]] = decodeURIComponent(match[2]);
+    });
+    keys.forEach(k => {
+      const val = sanitize(cookieData[k]);
+      if (!result[k] && val) result[k] = val;
+    });
+  } catch (error) {
+    if (window.ENV && window.ENV.DEBUG_TRACKING) {
+      console.warn('[NexusUTM] Falha ao ler cookies:', error);
+    }
+  }
+
+  return result;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (window.NexusTracker && window.NexusTracker.config) {
     initCheckout(window.NexusTracker.config);
@@ -27,6 +83,33 @@ async function initCheckout(config) {
     return;
   }
 
+  if (isPreview) {
+    console.log("[PREVIEW MODE] Checkout em modo de visualização. Funções financeiras desabilitadas.");
+  }
+
+  // Load public config
+  const { data: publishedConfig } = await supabaseClient.rpc('rpc_public_get_published_version', { p_product_slug: productSlug });
+  let finalConfig = null;
+  
+  if (publishedConfig) {
+    finalConfig = normalizeCheckoutConfig(publishedConfig);
+  } else {
+    // Fallback para a legada
+    const { data: legacyConfig } = await supabaseClient.rpc('rpc_public_get_checkout_config', { p_product_slug: productSlug });
+    if (legacyConfig) {
+      finalConfig = normalizeCheckoutConfig(legacyConfig);
+    }
+  }
+
+  // A/B Testing: Intercepta a configuração visual passivamente
+  if (finalConfig && window.NexusExperiments && window.NexusTracker && window.NexusTracker.sessionId) {
+    finalConfig = await window.NexusExperiments.resolveVariant(productSlug, window.NexusTracker.sessionId, finalConfig);
+  }
+
+  if (finalConfig) {
+    applyCheckoutConfig(finalConfig);
+  }
+
   // Tracking
   if (window.NexusTracker && window.NexusTracker.trackEvent) {
     // will track after product load
@@ -47,7 +130,7 @@ async function initCheckout(config) {
   currentProduct = product;
   
   // Tracking
-  if (window.NexusTracker && window.NexusTracker.track) {
+  if (!isPreview && window.NexusTracker && window.NexusTracker.track) {
     const finalPrice = parseFloat(product.sale_price || product.price || 0);
     window.NexusTracker.track('InitiateCheckout', { 
       product_slug: productSlug, 
@@ -86,7 +169,7 @@ async function initCheckout(config) {
   priceContainer.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 4px;">
       <span style="font-size: 13px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Por apenas</span>
-      <span style="font-size: 36px; font-weight: 900; color: var(--success); line-height: 1.1;">12x de ${formattedInstallment}</span>
+      <span style="font-size: 42px; font-weight: 900; color: var(--success); line-height: 1.1; letter-spacing: -1px; text-shadow: 0 4px 16px rgba(34,197,94,0.3);">12x de ${formattedInstallment}</span>
       <span style="font-size: 14px; color: var(--text-muted); margin-top: 4px;">ou ${formattedFullPrice} à vista</span>
       
       <div style="display: inline-flex; align-items: center; justify-content: center; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 6px 12px; border-radius: 6px; margin-top: 12px; max-width: fit-content;">
@@ -99,19 +182,12 @@ async function initCheckout(config) {
     document.getElementById('product-cover').style.backgroundImage = `url('${product.thumbnail_url}')`;
   }
 
-  // Capturar UTMs da URL
-  const utms = {
-    utm_source: urlParams.get('utm_source'),
-    utm_medium: urlParams.get('utm_medium'),
-    utm_campaign: urlParams.get('utm_campaign'),
-    utm_content: urlParams.get('utm_content'),
-    utm_term: urlParams.get('utm_term'),
-    fbclid: urlParams.get('fbclid'),
-    gclid: urlParams.get('gclid'),
-  };
+  // Capturar UTMs persistidas (URL > LocalStorage > Cookies)
+  const utms = getPersistedAttribution();
 
   // Inicializar Sessão Anônima via Edge Function Segura
-  try {
+  if (!isPreview) {
+    try {
     const res = await fetch(`${window.NexusTracker.config.SUPABASE_URL}/functions/v1/capture-lead`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -130,8 +206,9 @@ async function initCheckout(config) {
       currentSessionId = session.id;
       window.currentSessionToken = session.session_token; // Guardar o token
     }
-  } catch (err) {
-    console.error("Erro ao criar sessão:", err);
+    } catch (err) {
+      console.error("Erro ao criar sessão:", err);
+    }
   }
 
   // Preencher parcelas se max_installments estiver configurado no produto
@@ -163,6 +240,7 @@ function setPaymentMethod(method, element) {
 }
 
 async function captureLead() {
+  if (isPreview) return;
   const email = document.getElementById('c-email').value;
   const name = document.getElementById('c-name').value;
   const phone = document.getElementById('c-phone').value;
@@ -177,7 +255,7 @@ async function captureLead() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'upsert_lead',
-        leadData: { email, name, phone, status: 'lead' }
+        leadData: { email, name, phone, status: 'lead', ...getPersistedAttribution() }
       })
     });
     const leadDataResp = await res.json();
@@ -211,6 +289,11 @@ async function captureLead() {
 }
 
 async function processPayment() {
+  if (isPreview) {
+    alert("[PREVIEW MODE] Pagamento simulado com sucesso. Nenhuma cobrança real foi gerada.");
+    return;
+  }
+
   const name = document.getElementById('c-name').value;
   const email = document.getElementById('c-email').value;
   const cpfCnpj = document.getElementById('c-cpf').value;
@@ -342,7 +425,8 @@ async function processPayment() {
         method: selectedPaymentMethod,
         payment_id: data.payment_id,
         value: finalPrice,
-        currency: currentProduct.currency || 'BRL'
+        currency: currentProduct.currency || 'BRL',
+        ...getPersistedAttribution()
       });
       // Se for BOLETO, adiciona score
       if (selectedPaymentMethod === 'BOLETO') {
@@ -443,3 +527,133 @@ function redirectToThankYou(status) {
     
   window.location.href = url;
 }
+
+// ==========================================
+// CONFIGURAÇÃO DINÂMICA (BUILDER / PREVIEW)
+// ==========================================
+function normalizeCheckoutConfig(data) {
+  if (!data) return null;
+  if (data.schemaVersion === 1) return data; 
+
+  const theme = data.theme_config || {};
+  const content = data.content_config || {};
+  const conv = data.conversion_config || {};
+
+  return {
+    schemaVersion: 1,
+    theme: {
+      primaryColor: theme.theme_color || '#FF6B00',
+    },
+    buttons: {
+      text: content.button_text || ''
+    },
+    blocks: [
+      { type: 'guarantee', title: content.guarantee_title || '' },
+      { type: 'benefits', items: content.benefits_list || [] }
+    ],
+    countdown: {
+      enabled: conv.timer_enabled || false,
+      minutes: conv.timer_minutes || 15
+    },
+    socialProof: {
+      enabled: conv.social_proof_enabled || false
+    }
+  };
+}
+
+function applyCheckoutConfig(config) {
+  if (!config) return;
+
+  // Theme Color
+  if (config.theme && config.theme.primaryColor) {
+    document.documentElement.style.setProperty('--accent', config.theme.primaryColor);
+  }
+
+  // Content
+  if (config.buttons && config.buttons.text) {
+    const btns = document.querySelectorAll('.btn-submit');
+    btns.forEach(btn => {
+      const textNode = Array.from(btn.childNodes).find(n => n.nodeType === 3 && n.textContent.trim().length > 0);
+      if (textNode) {
+        textNode.textContent = ' ' + config.buttons.text;
+      }
+    });
+  }
+  
+  const guaranteeBlock = config.blocks && config.blocks.find(b => b.type === 'guarantee');
+  if (guaranteeBlock && guaranteeBlock.title) {
+    const titleEl = document.querySelector('.guarantee-badge h4');
+    if (titleEl) {
+      const textNode = Array.from(titleEl.childNodes).find(n => n.nodeType === 3 && n.textContent.trim().length > 0);
+      if (textNode) {
+        textNode.textContent = ' ' + guaranteeBlock.title;
+      } else {
+        titleEl.appendChild(document.createTextNode(' ' + guaranteeBlock.title));
+      }
+    }
+  }
+
+  const benefitsBlock = config.blocks && config.blocks.find(b => b.type === 'benefits');
+  if (benefitsBlock && Array.isArray(benefitsBlock.items)) {
+    const ul = document.querySelector('.benefits-list');
+    if (ul) {
+      ul.innerHTML = '';
+      benefitsBlock.items.forEach(ben => {
+        const li = document.createElement('li');
+        li.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> `;
+        li.appendChild(document.createTextNode(ben));
+        ul.appendChild(li);
+      });
+    }
+  }
+
+  // Conversion
+  if (config.countdown) {
+    const timerBar = document.querySelector('.timer-bar');
+    if (timerBar) {
+      timerBar.style.display = config.countdown.enabled ? 'flex' : 'none';
+      if (config.countdown.enabled && config.countdown.minutes) {
+        const display = document.querySelector('#countdown-timer');
+        if (display && !window._timerStarted) {
+           startTimer(config.countdown.minutes * 60, display);
+           window._timerStarted = true;
+        }
+      }
+    }
+  }
+
+  if (config.socialProof) {
+    const proof = document.querySelector('.social-proof');
+    if (proof) {
+      proof.style.display = config.socialProof.enabled ? 'block' : 'none';
+    }
+  }
+}
+
+window.addEventListener('message', (event) => {
+  // Em produção, validar event.origin
+  if (event.data && event.data.type === 'NEXUS_CHECKOUT_PREVIEW_UPDATE') {
+    applyCheckoutConfig(event.data.payload);
+  }
+});
+
+let timerInterval;
+function startTimer(duration, display) {
+  let timer = duration;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(function () {
+    let minutes = parseInt(timer / 60, 10);
+    let seconds = parseInt(timer % 60, 10);
+
+    minutes = minutes < 10 ? "0" + minutes : minutes;
+    seconds = seconds < 10 ? "0" + seconds : seconds;
+
+    display.textContent = minutes + ":" + seconds;
+
+    if (--timer < 0) {
+      timer = 0;
+      clearInterval(timerInterval);
+    }
+  }, 1000);
+}
+

@@ -8,19 +8,41 @@
   'use strict';
 
   // ── CONFIGURAÇÃO ─────────────────────────────────────────
-  // Substitua os placeholders pelas suas credenciais reais
+  const env = window.ENV || {};
+
   const CONFIG = {
-    DEBUG_TRACKING:      true,                      // Ativar log no console
-    META_PIXEL_ID:       '729982690062335',           // Ex: 1234567890
-    GA4_ID:              'G-Q0WXJZP1PX',            // Ex: G-ABC123DEF4
-    GTM_ID:              'GTM-XXXXXXX',             // Ex: GTM-ABC1234
-    CLARITY_ID:          'SEU_CLARITY_ID',          // Ex: abcde12345
-    GADS_CONVERSION_ID:  'AW-XXXXXXXXX',            // Ex: AW-123456789
-    GADS_LEAD_LABEL:     'XXXXXXXXXXX',             // Label evento Lead
-    GADS_CHECKOUT_LABEL: 'XXXXXXXXXXX',             // Label InitiateCheckout
-    SUPABASE_URL:        'https://wkomsnqucatqepabepje.supabase.co',        // Ex: https://xxx.supabase.co
-    SUPABASE_ANON_KEY:   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indrb21zbnF1Y2F0cWVwYWJlcGplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NTQ3NzAsImV4cCI6MjA5NzEzMDc3MH0.97SsmA1J5TvQjaJTL_-9rhuHtsRyOzbuQ_R_IGaravc',  // chave pública anon
-    CHECKOUT_URL:        'https://membros.glauberads.com.br/c/jy773ql',
+    DEBUG_TRACKING:      env.DEBUG_TRACKING === 'true' || env.DEBUG_TRACKING === true,
+    META_PIXEL_ID:       env.META_PIXEL_ID || null,
+    GA4_ID:              env.GA4_ID || null,
+    GTM_ID:              env.GTM_ID || null,
+    CLARITY_ID:          env.CLARITY_ID || null,
+    GADS_CONVERSION_ID:  env.GADS_CONVERSION_ID || null,
+    GADS_LEAD_LABEL:     env.GADS_LEAD_LABEL || null,
+    GADS_CHECKOUT_LABEL: env.GADS_CHECKOUT_LABEL || null,
+    SUPABASE_URL:        env.SUPABASE_URL || null,
+    SUPABASE_ANON_KEY:   env.SUPABASE_ANON_KEY || null,
+    CHECKOUT_URL:        env.CHECKOUT_URL || null,
+  };
+
+  // Funções globais de validação de ambiente (expostas para uso do admin/checkout)
+  window.requireSupabaseConfig = function() {
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
+      console.error('[NexusTracker] ERRO SEGURO: Supabase não configurado. Funcionalidade transacional bloqueada.');
+      // Ocultar formulário ou desativar botão se no checkout
+      const btn = document.getElementById('btn-pagar') || document.querySelector('[type="submit"]');
+      if (btn) btn.disabled = true;
+      return false;
+    }
+    return true;
+  };
+
+  window.isIntegrationEnabled = function(name) {
+    if (name === 'META') return !!CONFIG.META_PIXEL_ID;
+    if (name === 'GA4') return !!CONFIG.GA4_ID;
+    if (name === 'GTM') return !!CONFIG.GTM_ID;
+    if (name === 'CLARITY') return !!CONFIG.CLARITY_ID;
+    if (name === 'GADS') return !!CONFIG.GADS_CONVERSION_ID;
+    return false;
   };
 
   // ── SESSION ID & CORRELATION ID ──────────────────────────
@@ -323,10 +345,11 @@
 
     // ── META PIXEL ─────────────────────────────────────────
     _trackMeta(eventName, params, eventId) {
-      if (!window.fbq) return;
+      if (!window.fbq || !window.isIntegrationEnabled('META')) return;
       const val = params?.value || 0;
       const currency = params?.currency || 'BRL';
       const metaStandard = {
+        PageView: () => fbq('track', 'PageView', {}, { eventID: eventId }),
         ViewContent: () => fbq('track', 'ViewContent', { content_name: 'NexusSaaS', currency, value: val }, { eventID: eventId }),
         Lead: () => fbq('track', 'Lead', { currency, value: val }, { eventID: eventId }),
         InitiateCheckout: () => fbq('track', 'InitiateCheckout', { currency, value: val, content_ids: [params?.product_slug || 'nexussaas'] }, { eventID: eventId }),
@@ -414,7 +437,7 @@
 
     // ── META CAPI RELAY ────────────────────────────────────
     async _sendCAPI(eventName, params, eventId) {
-      if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('SEU_')) return;
+      if (!window.requireSupabaseConfig() || !window.isIntegrationEnabled('META')) return;
       try {
         const utms = this.utms;
         const userData = window._nexusLeadData || {};
@@ -448,7 +471,7 @@
 
     // ── SUPABASE EVENT LOG ─────────────────────────────────
     async _logEvent(eventName, params, eventId) {
-      if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('SEU_')) return;
+      if (!window.requireSupabaseConfig()) return;
       try {
         await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/capture-lead`, {
           method: 'POST',
@@ -596,7 +619,7 @@
     // ── LOOKALIKE DATA ENRICHMENT ──────────────────────────
     async enrichForLookalike(leadData) {
       window._nexusLeadData = leadData;
-      if (!CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.includes('SEU_')) return;
+      if (!window.requireSupabaseConfig()) return;
       try {
         const em = leadData.email ? await sha256(leadData.email) : null;
         const ph = leadData.phone ? await sha256(leadData.phone.replace(/\D/g, '')) : null;
