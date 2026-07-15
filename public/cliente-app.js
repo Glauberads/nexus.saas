@@ -3,20 +3,12 @@ let currentMemberId = null;
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Configurar Supabase
-  if (window.NexusTracker && window.NexusTracker.config) {
-    const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.NexusTracker.config;
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (window.ENV && window.ENV.SUPABASE_URL) {
+    supabaseClient = window.supabase.createClient(window.ENV.SUPABASE_URL, window.ENV.SUPABASE_ANON_KEY);
     initApp();
   } else {
-    const script = document.createElement('script');
-    script.src = 'nexus-tracker.js';
-    script.onload = () => {
-      const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.NexusTracker.config;
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      initApp();
-    };
-    document.head.appendChild(script);
+    console.error("Configuração de ambiente (ENV) não encontrada. Verifique se env.js está carregando corretamente.");
+    alert("Erro de configuração. Não foi possível conectar ao banco de dados.");
   }
 });
 
